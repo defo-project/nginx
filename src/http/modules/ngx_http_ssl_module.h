@@ -13,7 +13,6 @@
 #include <ngx_core.h>
 #include <ngx_http.h>
 
-
 typedef struct {
     ngx_ssl_t                       ssl;
 
@@ -42,6 +41,9 @@ typedef struct {
     ngx_ssl_cache_t                *certificate_cache;
 
     ngx_str_t                       dhparam;
+#ifndef OPENSSL_NO_ECH
+    ngx_str_t                       echkeydir;
+#endif
     ngx_str_t                       ecdh_curve;
     ngx_str_t                       client_certificate;
     ngx_str_t                       trusted_certificate;

@@ -8,9 +8,19 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
-
+#ifndef OPENSSL_NO_ECH
+#include <ngx_stream_ssl_preread_module.h>
+#else
+/*
+ * moved these to a header to allow access from elsewhere
+ * which is needed for ECH split-mode with HRR
+ */
 typedef struct {
     ngx_flag_t      enabled;
+#ifndef OPENSSL_NO_ECH
+    ngx_str_t       echkeydir;
+    ngx_ssl_t       *ssl;
+#endif
 } ngx_stream_ssl_preread_srv_conf_t;
 
 
@@ -27,8 +37,13 @@ typedef struct {
     ngx_log_t      *log;
     ngx_pool_t     *pool;
     ngx_uint_t      state;
+#ifndef OPENSSL_NO_ECH
+    ngx_uint_t      ech_state;
+    u_char          *hrrtok;
+    size_t          hrrtoklen;
+#endif
 } ngx_stream_ssl_preread_ctx_t;
-
+#endif
 
 static ngx_int_t ngx_stream_ssl_preread_handler(ngx_stream_session_t *s);
 static ngx_int_t ngx_stream_ssl_preread_parse_record(
@@ -56,6 +71,15 @@ static ngx_command_t  ngx_stream_ssl_preread_commands[] = {
       NGX_STREAM_SRV_CONF_OFFSET,
       offsetof(ngx_stream_ssl_preread_srv_conf_t, enabled),
       NULL },
+
+#ifndef OPENSSL_NO_ECH
+    { ngx_string("ssl_echkeydir"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_ssl_preread_srv_conf_t, echkeydir),
+      NULL },
+#endif
 
       ngx_null_command
 };
@@ -104,6 +128,115 @@ static ngx_stream_variable_t  ngx_stream_ssl_preread_vars[] = {
 };
 
 
+#ifndef OPENSSL_NO_ECH
+ngx_int_t ngx_stream_do_ech(
+    ngx_stream_ssl_preread_srv_conf_t  *sscf,
+    ngx_stream_ssl_preread_ctx_t       *ctx,
+    ngx_connection_t                   *c,
+    u_char                             *p,
+    u_char                             **last,
+    int                                *dec_ok)
+{
+    int rv = 0;
+    char *inner_sni = NULL, *outer_sni = NULL;
+    unsigned char *hrrtok = NULL, *chstart = NULL, *inp = NULL;
+    size_t toklen = 0, chlen = 0, msglen = 0, innerlen = 0;
+
+    ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: checking ECH");
+    chstart = p;
+    /*
+     * chew up bogus change cipher spec, if one's there when we're
+     * in midst of HRR
+     */
+    if (ctx->ech_state == 1
+        && p[0] == 20
+        && p[1] == 3
+        && p[2] == 3
+        && p[3] == 0
+        && p[4] == 1
+        && p[5] == 1) {
+        chstart += 6;
+        ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: skipped CCS");
+    }
+    /*
+     * check that we are dealing with a TLSv1.3 ClientHello
+     * and establish CH length (in case of early data)
+     */
+    if (chstart[0] == 22 /* handshake */
+        && chstart[1] == 3 /* tls 1.2 or 1.3 */
+        && (chstart[2] == 3 || chstart[2] == 2 || chstart[2] == 1) /* all ok */
+        && chstart[5] == 1) { /* ClientHello */
+
+        chlen = 5 + (uint8_t)chstart[3] * 256 + (uint8_t)chstart[4];
+        msglen = *last - chstart; /* in case of early data */
+        if (msglen != chlen) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: message (%z) longer than CH (%z)", msglen, chlen);
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: message only has CH (%z)", chlen);
+        }
+        /* we'll at least try for ECH */
+        inp = ngx_pcalloc(c->pool, chlen);
+        if (inp == NULL) {
+            return NGX_ERROR;
+        }
+        innerlen = chlen;
+        if (ctx->ech_state != 0) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH 2nd go (HRR), toklen = %d", (int)ctx->hrrtoklen);
+            hrrtok = ctx->hrrtok;
+            toklen = ctx->hrrtoklen;
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: ECH 1st time");
+        }
+        rv = SSL_CTX_ech_raw_decrypt(sscf->ssl->ctx, dec_ok,
+                                    &inner_sni, &outer_sni,
+                                    chstart, chlen,
+                                    inp, &innerlen,
+                                    &hrrtok, &toklen);
+        if (ctx->ech_state == 1) {
+            OPENSSL_free(hrrtok); /* we can free that now */
+            ctx->hrrtok = NULL;
+        }
+        if (rv != 1) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH decrypt failed (%d)", rv);
+            return NGX_ERROR;
+        }
+        if (*dec_ok == 1) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH success outer_sni: %s inner_sni: %s",
+                (outer_sni?outer_sni:"NONE"),(inner_sni?inner_sni:"NONE"));
+            if (ctx->ech_state == 0) {
+                /* store hrrtok from 1st CH, in case needed later */
+                ctx->hrrtok = hrrtok;
+                ctx->hrrtoklen = toklen;
+            }
+            /* increment ech_state */
+            ctx->ech_state += 1;
+            /* swap CH's over, adding back extra data if any */
+            memcpy(chstart, inp, innerlen);
+            if (msglen > chlen) {
+                memcpy(chstart + innerlen, chstart + chlen, msglen - chlen);
+                *last = chstart + innerlen + (msglen - chlen);
+            } else {
+                *last = chstart + innerlen;
+            }
+            c->buffer->last = *last;
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH decrypt failed (%d)", rv);
+        }
+    } else {
+        ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+            "do_ech: not a CH or CCS, contentype: %z, h/s type: %z",
+            chstart[0], chstart[5]);
+    }
+    return NGX_OK;
+}
+#endif
+
 static ngx_int_t
 ngx_stream_ssl_preread_handler(ngx_stream_session_t *s)
 {
@@ -144,10 +277,28 @@ ngx_stream_ssl_preread_handler(ngx_stream_session_t *s)
         ctx->pool = c->pool;
         ctx->log = c->log;
         ctx->pos = c->buffer->pos;
+#ifndef OPENSSL_NO_ECH
+        ctx->hrrtok = NULL;
+        ctx->hrrtoklen = 0;
+        ctx->ech_state = 0;
+#endif
+
     }
 
     p = ctx->pos;
     last = c->buffer->last;
+
+#ifndef OPENSSL_NO_ECH
+    /* check if we're trying ECH */
+    if (sscf->ssl != NULL && sscf->ssl->ctx != NULL) {
+        int echrv, dec_ok = 0;
+
+        echrv = ngx_stream_do_ech(sscf, ctx, c, p, &last, &dec_ok);
+        if (echrv != NGX_OK) {
+            return NGX_ERROR;
+        }
+    }
+#endif
 
     while (last - p >= 5) {
 
@@ -679,6 +830,10 @@ ngx_stream_ssl_preread_create_srv_conf(ngx_conf_t *cf)
     }
 
     conf->enabled = NGX_CONF_UNSET;
+#ifndef OPENSSL_NO_ECH
+    memset(&conf->echkeydir, 0, sizeof(conf->echkeydir));
+    conf->ssl = NULL;
+#endif
 
     return conf;
 }
@@ -691,6 +846,31 @@ ngx_stream_ssl_preread_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_stream_ssl_preread_srv_conf_t *conf = child;
 
     ngx_conf_merge_value(conf->enabled, prev->enabled, 0);
+#ifndef OPENSSL_NO_ECH
+    ngx_conf_merge_str_value(conf->echkeydir, prev->echkeydir, "");
+    if (ngx_strcmp(conf->echkeydir.data, "") != 0) {
+        const SSL_METHOD *meth = NULL;
+        SSL_CTX *sctx = NULL;
+
+        meth = TLS_server_method();
+        if (cf == NULL || cf->log == NULL || meth == NULL) {
+            return NULL;
+        }
+        sctx = SSL_CTX_new(meth);
+        if (sctx == NULL) {
+            return NULL;
+        }
+        conf->ssl = ngx_pcalloc(cf->pool, sizeof(ngx_ssl_t));
+        if (conf->ssl == NULL) {
+            return NULL;
+        }
+        conf->ssl->ctx = sctx;
+        conf->ssl->log = cf->log;
+        if (ngx_ssl_echkeydir(cf, conf->ssl, &conf->echkeydir) != NGX_OK) {
+            return NULL;
+        }
+    }
+#endif
 
     return NGX_CONF_OK;
 }
