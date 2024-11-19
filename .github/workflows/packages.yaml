@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
   push:
   schedule:
-    - cron: '30 5 * * *'
+    - cron: '00 6 * * *'
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -22,14 +22,13 @@ jobs:
           git -c user.name=Github -c user.email=none merge upstream/master
 
       - name: Cache ccache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /home/runner/.cache/ccache
           key: ccache
 
       - name: Prepare build environment
         run: |
-          sudo add-apt-repository -y ppa:v-launchpad-jochen-sprickerhof-de/sbuild
           sudo DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends sbuild mmdebstrap debian-archive-keyring ccache uidmap
 
           mkdir -p "$HOME/.cache/sbuild"
@@ -64,8 +63,7 @@ jobs:
 
       - name: Test packages
         run: |
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends procps gettext
-          mmdebstrap --chrooted-customize-hook="curl -L 'https://github.com/defo-project/ech-dev-utils/archive/refs/heads/main.tar.gz' | tar xz; cd ech-dev-utils-main; PACKAGING=1 scripts/testnginx.sh" \
+          mmdebstrap --verbose --chrooted-customize-hook="curl -L 'https://github.com/defo-project/ech-dev-utils/archive/refs/heads/main.tar.gz' | tar xz; cd ech-dev-utils-main; PACKAGING=1 scripts/testnginx.sh" \
             --variant=essential --include=ca-certificates,nginx,curl testing /dev/null \
             "deb [signed-by=/usr/share/keyrings/debian-archive-keyring.gpg] http://deb.debian.org/debian testing main" \
             "deb [trusted=yes] https://github.com/defo-project/openssl/raw/packages/ /" \
