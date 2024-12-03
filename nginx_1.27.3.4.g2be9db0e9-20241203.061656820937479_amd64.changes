@@ -1,0 +1,107 @@
+Format: 1.8
+Date: Thu, 12 Oct 2023 08:41:38 +0200
+Source: nginx
+Binary: libnginx-mod-http-geoip libnginx-mod-http-geoip-dbgsym libnginx-mod-http-image-filter libnginx-mod-http-image-filter-dbgsym libnginx-mod-http-perl libnginx-mod-http-perl-dbgsym libnginx-mod-http-xslt-filter libnginx-mod-http-xslt-filter-dbgsym libnginx-mod-mail libnginx-mod-mail-dbgsym libnginx-mod-stream libnginx-mod-stream-dbgsym libnginx-mod-stream-geoip libnginx-mod-stream-geoip-dbgsym nginx nginx-common nginx-core nginx-dbgsym nginx-dev nginx-doc nginx-extras nginx-full nginx-light
+Architecture: amd64 all
+Version: 1.27.3.4.g2be9db0e9-20241203.061656820937479
+Distribution: testing
+Urgency: medium
+Maintainer: Debian Nginx Maintainers <pkg-nginx-maintainers@alioth-lists.debian.net>
+Changed-By: Jochen Sprickerhof <jspricke@debian.org>
+Description:
+ libnginx-mod-http-geoip - GeoIP HTTP module for Nginx
+ libnginx-mod-http-image-filter - HTTP image filter module for Nginx
+ libnginx-mod-http-perl - Perl module for Nginx
+ libnginx-mod-http-xslt-filter - XSLT Transformation module for Nginx
+ libnginx-mod-mail - Mail module for Nginx
+ libnginx-mod-stream - Stream module for Nginx
+ libnginx-mod-stream-geoip - GeoIP Stream module for Nginx
+ nginx      - small, powerful, scalable web/proxy server
+ nginx-common - small, powerful, scalable web/proxy server - common files
+ nginx-core - nginx web/proxy server (standard version)
+ nginx-dev  - nginx web/proxy server - development headers
+ nginx-doc  - small, powerful, scalable web/proxy server - documentation
+ nginx-extras - nginx web/proxy server (extended version)
+ nginx-full - nginx web/proxy server (standard version with 3rd parties)
+ nginx-light - nginx web/proxy server (basic version)
+Changes:
+ nginx (1.27.3.4.g2be9db0e9-20241203.061656820937479) UNRELEASED; urgency=medium
+ .
+   ** SNAPSHOT build @3d5cb33d4 **
+ .
+   * Add DEfO support
+Checksums-Sha1:
+ 81287be4db08dc5d82f86254e343d1d0d2f4cbc0 36924 libnginx-mod-http-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ bc7ab4600ab1799d03dfeb23d0cefadb80f0ae9a 16512 libnginx-mod-http-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ da0f0d6accfe5b4b6664b8307c39a2b5ca4a92c0 44732 libnginx-mod-http-image-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ b4b168e66d5c74fea0d1f9a180d953da525df569 20296 libnginx-mod-http-image-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 821b04de767259aa05de7cb4547c43f6f0ec687e 107844 libnginx-mod-http-perl-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 6848641331788806e9b0d5d73ca8a57b012dc564 28648 libnginx-mod-http-perl_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 6617862a07df2ec44a62d04ef7f70981e11101c3 53260 libnginx-mod-http-xslt-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 91bf6977d46ecafff74ddad2192898060027a038 18696 libnginx-mod-http-xslt-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 94e947270a249ee24491ccd8424f8a242e8e13e5 104508 libnginx-mod-mail-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ f21f6ceb11ec0fe81db304ba2fe7032685c72685 50488 libnginx-mod-mail_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 33121dd679bbb6ba5b47633f44292bccd2fe5bfc 197392 libnginx-mod-stream-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 794030328a8d390f66f684577a61a1ef8d31a1f3 23424 libnginx-mod-stream-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 72758d4aff9f1dad98c2ece70c58323a2a5bb8da 15704 libnginx-mod-stream-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 1e1302cdce38c59ca3d8925afba161bc42a73e07 86756 libnginx-mod-stream_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 41ee78e8086e920f6f2cb440a60bac6456fbe175 37220 nginx-common_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 1de9d8efa416f51752657e1bb96bf139d8e3dbcb 11828 nginx-core_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ ddb2a4a8102e067049eced23e4e2deadd606535d 1152016 nginx-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 3105c585ca6b5ae63781fc04456dd73e22044ff1 125448 nginx-dev_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ fa48dee370d0364ec5f3db38805c4e4b67f58e38 19744 nginx-doc_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 7b2d688fae09187beac8fa713a7b2944dd0baa4d 12068 nginx-extras_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 31719981e8e802309197eed5f7ebc84001a6f46b 11896 nginx-full_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 9c1045ad0a0271a112e948768375597b44a486e4 11604 nginx-light_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 9a2b6e3e5df82debaa78f8939879530488cf6dd6 18762 nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.buildinfo
+ 60a6ab9ee381698d6d6bc9f78517f5c6b474fdd5 471684 nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+Checksums-Sha256:
+ ad4942145aaab1a97a08a11c567a952d908151812527f69c2022cfb716637784 36924 libnginx-mod-http-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 44afe830635e98df513e05de87083efbb7fd3df6588e1c381805b10a3f1fe912 16512 libnginx-mod-http-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 0d78efdc0453bb0dd6f3b78dee708dc8dbac6e2ca20400aedb8ae15d0e501bcb 44732 libnginx-mod-http-image-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ c6477bf917a129b16a105eba9f65a7ef97cbc5e48f915ffcc68cc47ddd95b713 20296 libnginx-mod-http-image-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 5510998eac381e8b28d5ca443b016e32678f28554c1eb28c37f39a3d4397e293 107844 libnginx-mod-http-perl-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 0275d58b14b77b13b7f2ed142b228d04b8267dd0a127bd3d129355ccd148d424 28648 libnginx-mod-http-perl_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ f6bc97c400d94f0b19851161dca3992551d33976af2e5d4280baa717a7526def 53260 libnginx-mod-http-xslt-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ caefa73c3bc60ee2653a3c8d0d4737797e9d7d1cf938c609390ed356c5b784e1 18696 libnginx-mod-http-xslt-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 955ec334a80143bd94eb0721439d33f2fc7a7855d81ff02ca56aca0ce24cab72 104508 libnginx-mod-mail-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ bb1945b6b51517be33e41328b1215560774a38482eebc6236a81efa5efcb7c80 50488 libnginx-mod-mail_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 8a23a6e1617acbf9187d605d542cc0128fc47736224ededbe294f2b83d0142ed 197392 libnginx-mod-stream-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 53e58fe593495fc1517454ce171f4ccdd68fb56ad481a3810beb2171da4ac793 23424 libnginx-mod-stream-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ e6b4e08f471135cf7244eb07255d992a4f4ab6a0b007732f248609f45ecbd5f4 15704 libnginx-mod-stream-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ f615af094eb20995ceadabe2f365055e4aa1c792b4b97b31b654e1b321d8a9b7 86756 libnginx-mod-stream_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 31ecd9804a2ac7645080474b85404939377077b13041bac36939ac35db8d7d30 37220 nginx-common_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ bee74ea230460536f9447931aa7fa4e6a5b4854ac01133ce9e8daa7b51c8ba18 11828 nginx-core_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ f5efb9816e386624abd8fbbffc97008d5f1a67517387d64c0d9d1c5d20553d11 1152016 nginx-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ caaae55a0b03debf3dbf8db1cbe47899e3e6acd51f5123f4659e04a9b3a6916f 125448 nginx-dev_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 5142c7a376307df87603c5794d05776f1f0e342323d0f3b494acbf772accd5e3 19744 nginx-doc_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ b0771fe411585abfe383a7f549df0a6ac3d73b27a53e716956cfdc1af94f19d8 12068 nginx-extras_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 7adb5fa70ddbb7b55fcdc6b6f6e2e0c46c69d92920d33e414512b48626dc3097 11896 nginx-full_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 7415f2b218065da63fcd66e0cc164020278a9e99d1bc9dcc4386c4b0901d822a 11604 nginx-light_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 13dbab7f1d0ccb9750b1da3291daa314eddff093deaceaf61eb8f1a22a96d7b5 18762 nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.buildinfo
+ 1e805f0dd9fcaced352c59188d9de74948050002c0155a31cb69307e62509316 471684 nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+Files:
+ 904d890e2b99f00ede4fdfb7e3e06bb4 36924 debug optional libnginx-mod-http-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ ae4aac6c7e9f6bfbd0e232be743637fa 16512 httpd optional libnginx-mod-http-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 7591de51b97d4038d7494e915f7c01fc 44732 debug optional libnginx-mod-http-image-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 0ae431f77b794a2fc70121743c5d3c5c 20296 httpd optional libnginx-mod-http-image-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 1e07f345b34e0a58e45ae279fd9a526a 107844 debug optional libnginx-mod-http-perl-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 528f522fe6fea50f7b21494bfce27315 28648 httpd optional libnginx-mod-http-perl_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 65b20079331c921e341ba3f5829a57e5 53260 debug optional libnginx-mod-http-xslt-filter-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 071bc9614269f0f76800e151bf25f30d 18696 httpd optional libnginx-mod-http-xslt-filter_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 1a873e3f26ffb249278ee28fb2704312 104508 debug optional libnginx-mod-mail-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 9a12955999d073d15d1f4eaffd78e5da 50488 httpd optional libnginx-mod-mail_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ df6e84cb83d441f86787276a1ad8e2cc 197392 debug optional libnginx-mod-stream-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ b743a0ce49ddf25885c75c2fe9b76600 23424 debug optional libnginx-mod-stream-geoip-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ 69c02eaf35fe6519eea67af15a6482be 15704 httpd optional libnginx-mod-stream-geoip_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ bf576a31a100e5fdc33fc2c2e1e7746c 86756 httpd optional libnginx-mod-stream_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ c82fbd98c9b18248207899e6854a5772 37220 httpd optional nginx-common_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 5495b84651fe7b888ab4d051332c3c0c 11828 httpd optional nginx-core_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 5c836d0b4e9056fbca8a76cfce3fb58d 1152016 debug optional nginx-dbgsym_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ ebc5eb032b3de34ad4653607e4b3e971 125448 httpd optional nginx-dev_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ f8be8284aff397b8932c6a256178c26f 19744 doc optional nginx-doc_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 3c00b5663fb663130d4f93047a736b29 12068 httpd optional nginx-extras_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
+ f9237a114263c78aeefe2d2bbacea715 11896 httpd optional nginx-full_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ 89871c7f2f0bf7b65154fda1a4360c4b 11604 httpd optional nginx-light_1.27.3.4.g2be9db0e9-20241203.061656820937479_all.deb
+ e5ededac30fe289fb5561cf2c3aa2cd7 18762 httpd optional nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.buildinfo
+ e598712d25335d4f034ddc64a2ac87a0 471684 httpd optional nginx_1.27.3.4.g2be9db0e9-20241203.061656820937479_amd64.deb
