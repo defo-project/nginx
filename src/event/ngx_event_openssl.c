@@ -1339,8 +1339,8 @@ ngx_ssl_info_callback(const ngx_ssl_conn_t *ssl_conn, int where, int ret)
 
         char *inner_sni = NULL;
         char *outer_sni = NULL;
-        int echrv = SSL_ech_get_status(c->ssl->connection, &inner_sni,
-                                       &outer_sni);
+        int echrv = SSL_ech_get1_status(c->ssl->connection, &inner_sni,
+                                        &outer_sni);
         switch (echrv) {
         case SSL_ECH_STATUS_NOT_TRIED:
             ngx_ssl_error(NGX_LOG_INFO, c->log, 0, "ECH not attempted");
@@ -1637,7 +1637,13 @@ static int load_echkeys(ngx_ssl_t *ssl, ngx_str_t *dirname)
     size_t nlen = 0;
     struct stat thestat;
     int numkeys = 0;
+    OSSL_ECHSTORE * const es = OSSL_ECHSTORE_new(NULL, NULL);
 
+    if (es == NULL) {
+        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
+            "load_echkeys, error allocating store" , __LINE__);
+        return NGX_ERROR;
+    }
     if (nrv != NGX_OK) {
         ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
             "load_echkeys, error opening %s at %d", dirname->data, __LINE__);
@@ -1671,15 +1677,20 @@ static int load_echkeys(ngx_ssl_t *ssl, ngx_str_t *dirname)
                  return NGX_ERROR;
             }
             if (stat(privname, &thestat) == 0) {
-                    if (SSL_CTX_ech_server_enable_file(ssl->ctx, privname,
-                        SSL_ECH_USE_FOR_RETRY) != 1) {
-                    ngx_ssl_error(NGX_LOG_ALERT, ssl->log, 0,
-                        "load_echkeys, failed for: %s",privname);
-                } else {
+                BIO *in = BIO_new_file(privname, "r");
+                const int is_retry_config = OSSL_ECH_FOR_RETRY;
+
+                if (in != NULL
+                    && 1 == OSSL_ECHSTORE_read_pem(es, in, is_retry_config)) {
                     ngx_ssl_error(NGX_LOG_NOTICE, ssl->log, 0,
                         "load_echkeys, worked for: %s", privname);
                     somekeyworked = 1;
                 }
+                else {
+                    ngx_ssl_error(NGX_LOG_ALERT, ssl->log, 0,
+                        "load_echkeys, failed for: %s",privname);
+                }
+                BIO_free_all(in);
             }
         }
     }
@@ -1690,14 +1701,20 @@ static int load_echkeys(ngx_ssl_t *ssl, ngx_str_t *dirname)
             "load_echkeys failed for all keys but ECH configured");
         return NGX_ERROR;
     }
-
-    if (SSL_CTX_ech_server_get_key_status(ssl->ctx, &numkeys) != 1) {
+    if (OSSL_ECHSTORE_num_keys(es, &numkeys) != 1) {
         ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0, 
-            "load_echkeys SSL_CTX_ech_server_key_status failed");
+            "load_echkeys OSSL_ECHSTORE_num_keys failed");
         return NGX_ERROR;
     }
     ngx_ssl_error(NGX_LOG_NOTICE, ssl->log, 0, 
             "load_echkeys, total keys loaded: %d", numkeys);
+    if (1 != SSL_CTX_set1_echstore(ssl->ctx, es)) {
+        OSSL_ECHSTORE_free(es);
+        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0, 
+            "load_echkeys: SSL_CTX_set1_echstore failed");
+        return NGX_ERROR;
+    }
+    OSSL_ECHSTORE_free(es);
 
     return NGX_OK;
 }
@@ -5503,7 +5520,7 @@ ngx_ssl_get_ech_status(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
     char *inner_sni;
     char *outer_sni;
     char buf[PATH_MAX];
-    int echrv=SSL_ech_get_status(c->ssl->connection,&inner_sni,&outer_sni);
+    int echrv=SSL_ech_get1_status(c->ssl->connection,&inner_sni,&outer_sni);
     switch (echrv) {
     case SSL_ECH_STATUS_NOT_TRIED:
         snprintf(buf,PATH_MAX,"not attempted");
@@ -5532,7 +5549,7 @@ ngx_ssl_get_ech_inner_sni(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
 {
     char *inner_sni;
     char *outer_sni;
-    int echrv=SSL_ech_get_status(c->ssl->connection,&inner_sni,&outer_sni);
+    int echrv=SSL_ech_get1_status(c->ssl->connection,&inner_sni,&outer_sni);
     if (echrv==SSL_ECH_STATUS_SUCCESS && inner_sni) {
         s->len=strlen(inner_sni);
         s->data = ngx_pnalloc(pool, s->len);
@@ -5550,7 +5567,7 @@ ngx_ssl_get_ech_outer_sni(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
 {
     char *inner_sni;
     char *outer_sni;
-    int echrv=SSL_ech_get_status(c->ssl->connection,&inner_sni,&outer_sni);
+    int echrv=SSL_ech_get1_status(c->ssl->connection,&inner_sni,&outer_sni);
     if (echrv==SSL_ECH_STATUS_SUCCESS && outer_sni) {
         s->len=strlen(outer_sni);
         s->data = ngx_pnalloc(pool, s->len);
