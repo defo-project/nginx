@@ -339,14 +339,21 @@ main(int argc, char *const *argv)
         ngx_process = NGX_PROCESS_MASTER;
     }
 
+    /* tell-tale to detect if this is parent or child process */
+    ngx_int_t child_pid = NGX_BUSY;
+
 #if !(NGX_WIN32)
 
     if (ngx_init_signals(cycle->log) != NGX_OK) {
         return 1;
     }
 
+    /* tell-tale that this code has been executed */
+    child_pid--;
+
     if (!ngx_inherited && ccf->daemon) {
-        if (ngx_daemon(cycle->log) != NGX_OK) {
+        child_pid = ngx_daemon(cycle->log);
+        if (child_pid == NGX_ERROR) {
             return 1;
         }
 
@@ -359,8 +366,19 @@ main(int argc, char *const *argv)
 
 #endif
 
-    if (ngx_create_pidfile(&ccf->pid, cycle->log) != NGX_OK) {
-        return 1;
+    /* If ngx_daemon() returned the child's PID in the parent process
+     * after the fork() set ngx_pid to the child_pid, which gets
+     * written to the PID file, then exit.
+     * For NGX_WIN32 always write the PID file
+     * For others, only write it from the parent process */
+    if (child_pid < NGX_OK || child_pid > NGX_OK) {
+	ngx_pid = child_pid > NGX_OK ? child_pid : ngx_pid;
+        if (ngx_create_pidfile(&ccf->pid, cycle->log) != NGX_OK) {
+            return 1;
+	}
+    }
+    if (child_pid > NGX_OK) {
+        exit(0);
     }
 
     if (ngx_log_redirect_stderr(cycle) != NGX_OK) {
