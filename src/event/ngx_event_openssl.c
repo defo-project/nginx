@@ -1116,35 +1116,37 @@ ngx_ssl_info_callback(const ngx_ssl_conn_t *ssl_conn, int where, int ret)
         }
     }
 
-#ifndef OPENSSL_NO_ECH
-    if ((where & SSL_CB_HANDSHAKE_DONE) == SSL_CB_HANDSHAKE_DONE) {
+    if ((where & SSL_CB_ACCEPT_LOOP) == SSL_CB_ACCEPT_LOOP) {
         c = ngx_ssl_get_connection((ngx_ssl_conn_t *) ssl_conn);
 
-        char *inner_sni = NULL;
-        char *outer_sni = NULL;
-        int echrv = SSL_ech_get1_status(c->ssl->connection, &inner_sni,
-                                        &outer_sni);
-        switch (echrv) {
-        case SSL_ECH_STATUS_NOT_TRIED:
-            ngx_ssl_error(NGX_LOG_INFO, c->log, 0, "ECH not attempted");
-            break;
-        case SSL_ECH_STATUS_FAILED:
-            ngx_ssl_error(NGX_LOG_ERR, c->log, 0, "ECH tried but failed");
-            break;
-        case SSL_ECH_STATUS_BAD_NAME:
-            ngx_ssl_error(NGX_LOG_ERR, c->log, 0, "ECH worked but bad name");
-            break;
-        case SSL_ECH_STATUS_SUCCESS:
-            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
-                    "ECH success outer_sni: %s inner_sni: %s",
-                    (outer_sni?outer_sni:"NONE"),(inner_sni?inner_sni:"NONE"));
-            break;
-        default:
-            ngx_ssl_error(NGX_LOG_ERR, c->log, 0, "Error getting ECH status");
-            break;
+        if (!c->ssl->handshake_buffer_set) {
+            /*
+             * By default OpenSSL uses 4k buffer during a handshake,
+             * which is too low for long certificate chains and might
+             * result in extra round-trips.
+             *
+             * To adjust a buffer size we detect that buffering was added
+             * to write side of the connection by comparing rbio and wbio.
+             * If they are different, we assume that it's due to buffering
+             * added to wbio, and set buffer size.
+             */
+
+            rbio = SSL_get_rbio(ssl_conn);
+            wbio = SSL_get_wbio(ssl_conn);
+
+            if (rbio != wbio) {
+                (void) BIO_set_write_buffer_size(wbio, NGX_SSL_BUFSIZE);
+                c->ssl->handshake_buffer_set = 1;
+            }
         }
     }
-#endif
+}
+
+
+static int
+ngx_ssl_cmp_x509_name(const X509_NAME *const *a, const X509_NAME *const *b)
+{
+    return (X509_NAME_cmp(*a, *b));
 }
 
 
@@ -4928,10 +4930,18 @@ ngx_ssl_get_ech_status(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
     case SSL_ECH_STATUS_SUCCESS:
         snprintf(buf, PATH_MAX, "success");
         break;
+    case SSL_ECH_STATUS_GREASE:
+        snprintf(buf, PATH_MAX, "GREASEd ECH");
+        break;
+    case SSL_ECH_STATUS_BACKEND:
+        snprintf(buf, PATH_MAX, "Backend/inner ECH");
+        break;
     default:
         snprintf(buf, PATH_MAX, "error getting ECH status");
         break;
     }
+    OPENSSL_free(inner_sni);
+    OPENSSL_free(outer_sni);
     s->len = ngx_strlen(buf);
     s->data = ngx_pnalloc(pool, s->len);
     ngx_memcpy(s->data,buf,s->len);
@@ -4953,6 +4963,8 @@ ngx_ssl_get_ech_inner_sni(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
         s->data = ngx_pnalloc(pool, s->len);
         ngx_memcpy(s->data,"NONE",s->len);
     }
+    OPENSSL_free(inner_sni);
+    OPENSSL_free(outer_sni);
     return NGX_OK;
 }
 
@@ -4971,7 +4983,8 @@ ngx_ssl_get_ech_outer_sni(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
         s->data = ngx_pnalloc(pool, s->len);
         ngx_memcpy(s->data,"NONE",s->len);
     }
-
+    OPENSSL_free(inner_sni);
+    OPENSSL_free(outer_sni);
     return NGX_OK;
 }
 
