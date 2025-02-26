@@ -1142,14 +1142,6 @@ ngx_ssl_info_callback(const ngx_ssl_conn_t *ssl_conn, int where, int ret)
     }
 }
 
-
-static int
-ngx_ssl_cmp_x509_name(const X509_NAME *const *a, const X509_NAME *const *b)
-{
-    return (X509_NAME_cmp(*a, *b));
-}
-
-
 ngx_array_t *
 ngx_ssl_read_password_file(ngx_conf_t *cf, ngx_str_t *file)
 {
