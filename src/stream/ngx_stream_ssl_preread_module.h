@@ -2,7 +2,6 @@
 #ifndef _NGX_STREAM_SSL_PREREAD_MODULE_H_INCLUDED_
 #define _NGX_STREAM_SSL_PREREAD_MODULE_H_INCLUDED_
 
-#ifndef OPENSSL_NO_ECH
 typedef struct {
     ngx_flag_t      enabled;
 #ifndef OPENSSL_NO_ECH
@@ -42,5 +41,4 @@ ngx_int_t ngx_stream_do_ech(
     u_char                             **last,
     int                                *dec_ok);
 
-#endif
 #endif
