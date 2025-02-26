@@ -202,6 +202,8 @@ ngx_int_t ngx_stream_do_ech(
         if (rv != 1) {
             ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
                 "do_ech: ECH decrypt failed (%d)", rv);
+            OPENSSL_free(inner_sni);
+            OPENSSL_free(outer_sni);
             return NGX_ERROR;
         }
         if (*dec_ok == 1) {
@@ -228,6 +230,8 @@ ngx_int_t ngx_stream_do_ech(
             ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
                 "do_ech: ECH decrypt failed (%d)", rv);
         }
+        OPENSSL_free(inner_sni);
+        OPENSSL_free(outer_sni);
     } else {
         ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
             "do_ech: not a CH or CCS, contentype: %z, h/s type: %z",
