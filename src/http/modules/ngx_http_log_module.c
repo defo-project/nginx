@@ -961,7 +961,7 @@ ngx_http_log_ech_status(ngx_http_request_t *r, u_char *buf,
      * inner SNI if non-NULL */
     if (echstat != SSL_ECH_STATUS_SUCCESS) {
         OPENSSL_free(sni_clr);
-        sni_clr = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+        sni_clr = (char *)SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     }
     if (sni_clr != NULL)
         hostheader = sni_clr;
