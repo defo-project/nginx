@@ -1,3 +1,9 @@
+nginx (1.26.3-3.ech) UNRELEASED; urgency=medium
+
+  * Add DEfO support
+
+ -- Jochen Sprickerhof <jspricke@debian.org>  Wed, 06 Aug 2025 16:09:43 +0200
+
 nginx (1.26.3-3) unstable; urgency=medium
 
   [ Jan Mojžíš ]
