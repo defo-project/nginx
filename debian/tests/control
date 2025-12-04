@@ -1,0 +1,11 @@
+Tests: core-simple
+Restrictions: allow-stderr isolation-container needs-root
+Depends: nginx-core, curl
+
+Tests: ssi-module-test
+Restrictions: allow-stderr, isolation-container, needs-root,
+Depends: nginx, nginx-core, curl
+
+Test-Command: curl -L 'https://github.com/defo-project/ech-dev-utils/archive/refs/heads/main.tar.gz' | tar xz; cd ech-dev-utils-main; PACKAGING=1 scripts/testnginx.sh
+Restrictions: needs-internet, needs-root, allow-stderr
+Depends: curl, ca-certificates, nginx
