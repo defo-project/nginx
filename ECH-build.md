@@ -2,13 +2,6 @@
 
 # NGINX OpenSSL Encrypted Client Hello (ECH) integration.
 
-> [!NOTE]
-> This documentation probably doesn't belong here, nor as a single file, but
-> may be useful to have in one place. TODO: find out where to put the various
-> bits and pieces once those are stable.
-> 
-> Date: 2025-12-04
-
 ECH is specified in
 [draft-ietf-tls-esni](https://datatracker.ietf.org/doc/draft-ietf-tls-esni/).
 This documentation assumes a basic familiarity with the ECH specification.
