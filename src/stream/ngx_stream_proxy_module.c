@@ -9,6 +9,9 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
+#ifdef SSL_OP_ECH_GREASE
+#include <ngx_stream_ssl_preread_module.h>
+#endif
 
 typedef struct {
     ngx_addr_t                      *addr;
@@ -1729,6 +1732,13 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
     ngx_log_handler_pt            handler;
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
+#ifdef SSL_OP_ECH_GREASE
+    ngx_stream_ssl_preread_srv_conf_t  *sscf;
+    ngx_stream_ssl_preread_ctx_t       *ctx;
+    u_char                             *bend;
+    ngx_int_t                           echrv;
+    int                                 dec_ok = 0;
+#endif
 
     u = s->upstream;
 
@@ -1828,6 +1838,24 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
             if (n == NGX_AGAIN) {
                 break;
             }
+
+#ifdef SSL_OP_ECH_GREASE
+            /* handle split-mode HRR, if needed */
+            sscf = ngx_stream_get_module_srv_conf(s,
+                        ngx_stream_ssl_preread_module);
+            if (n > 0 && from_upstream == 0 && sscf->enabled) {
+                ctx = ngx_stream_get_module_ctx(s,
+                            ngx_stream_ssl_preread_module);
+                if (ctx != NULL && ctx->ech_state == 1) {
+                    bend = b->last + n;
+                    echrv = ngx_stream_do_ech(sscf, ctx, c, b->last,
+                                              &bend, &dec_ok);
+                    if (echrv == NGX_OK && dec_ok == 1) {
+                        n = bend - b->last; /* adjust size */
+                    }
+                }
+            }
+#endif
 
             if (n == NGX_ERROR) {
                 src->read->eof = 1;
