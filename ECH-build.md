@@ -338,6 +338,8 @@ wanted to debug into the ``ngx_ssl_ech_files()`` function:
     [Detaching after fork from child process 522259]
 ```
 
+# Content from here on does not apply to the upstreamed code in the NGINX master
+
 ## The DEfO-project NGINX
 
 As mentioned, we have a proof-of-concept NGINX repository as part of
