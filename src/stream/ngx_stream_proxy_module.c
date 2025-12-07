@@ -57,6 +57,7 @@ typedef struct {
     ngx_array_t                     *ssl_conf_commands;
 
     ngx_ssl_t                       *ssl;
+    ngx_flag_t                       ssl_ech;
 #endif
 
     ngx_stream_upstream_srv_conf_t  *upstream;
@@ -306,6 +307,15 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       NGX_STREAM_SRV_CONF_OFFSET,
       offsetof(ngx_stream_proxy_srv_conf_t, ssl_server_name),
       NULL },
+
+#ifdef SSL_OP_ECH_GREASE
+    { ngx_string("proxy_ssl_ech"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
+      ngx_conf_set_flag_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_proxy_srv_conf_t, ssl_ech),
+      NULL },
+#endif
 
     { ngx_string("proxy_ssl_verify"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
