@@ -80,7 +80,7 @@ used for NGINX configuration.
 ~# mkdir -p /etc/nginx/echkeydir
 ~# chmod 700 /etc/nginx/echkeydir
 ~# cd /etc/nginx/echkeydir
-~# $OSSL ech -public-name example.com -o example.com.pem.ech
+~# $OSSL ech -public_name example.com -out example.com.pem.ech
 ~# cat example.com.pem.ech
 -----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VuBCIEIJi22Im2rJ/lJqzNFZdGfsVfmknXAc8xz3fYPhD0Na5I
@@ -130,7 +130,7 @@ the example below does this.
 http {
     log_format withech '$remote_addr - $remote_user [$time_local] '
                     '"$request" $status $body_bytes_sent '
-                    '"$http_referer" "$http_user_agent" "$ech_status"';
+                    '"$http_referer" "$http_user_agent" "$ssl_ech_status"';
     access_log          /var/log/nginx/access.log withech;
     ssl_ech_file       /etc/nginx/echkeydir/example.com.pem.ech;
     server {
