@@ -9,9 +9,6 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
-#ifdef SSL_OP_ECH_GREASE
-#include <ngx_stream_ssl_preread_module.h>
-#endif
 
 typedef struct {
     ngx_addr_t                      *addr;
@@ -57,7 +54,11 @@ typedef struct {
     ngx_array_t                     *ssl_conf_commands;
 
     ngx_ssl_t                       *ssl;
-    ngx_flag_t                       ssl_ech;
+#endif
+
+#ifdef SSL_OP_ECH_GREASE
+    ngx_ssl_t                       *ech_ssl;
+    ngx_array_t                     *ech_files;
 #endif
 
     ngx_stream_upstream_srv_conf_t  *upstream;
@@ -308,15 +309,6 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       offsetof(ngx_stream_proxy_srv_conf_t, ssl_server_name),
       NULL },
 
-#ifdef SSL_OP_ECH_GREASE
-    { ngx_string("proxy_ssl_ech"),
-      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
-      ngx_conf_set_flag_slot,
-      NGX_STREAM_SRV_CONF_OFFSET,
-      offsetof(ngx_stream_proxy_srv_conf_t, ssl_ech),
-      NULL },
-#endif
-
     { ngx_string("proxy_ssl_verify"),
       NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
@@ -380,6 +372,15 @@ static ngx_command_t  ngx_stream_proxy_commands[] = {
       offsetof(ngx_stream_proxy_srv_conf_t, ssl_conf_commands),
       &ngx_stream_proxy_ssl_conf_command_post },
 
+#endif
+
+#ifdef SSL_OP_ECH_GREASE
+    { ngx_string("proxy_ssl_ech_split_file"),
+      NGX_STREAM_MAIN_CONF|NGX_STREAM_SRV_CONF|NGX_CONF_TAKE1,
+      ngx_conf_set_str_array_slot,
+      NGX_STREAM_SRV_CONF_OFFSET,
+      offsetof(ngx_stream_proxy_srv_conf_t, ech_files),
+      NULL },
 #endif
 
       ngx_null_command
@@ -786,6 +787,12 @@ ngx_stream_proxy_connect(ngx_stream_session_t *s)
 
         u->peer.name = u->state->peer;
     }
+#endif
+
+#ifdef SSL_OP_ECH_GREASE
+    u->hrrtok = NULL;
+    u->hrrtoklen = 0;
+    u->ech_state = 0;
 #endif
 
     if (rc == NGX_BUSY) {
@@ -1725,6 +1732,128 @@ ngx_stream_proxy_test_connect(ngx_connection_t *c)
 }
 
 
+#ifdef SSL_OP_ECH_GREASE
+ngx_int_t ngx_stream_do_ech(
+    ngx_stream_proxy_srv_conf_t        *pscf,
+    ngx_stream_upstream_t              *u,
+    ngx_connection_t                   *c,
+    u_char                             *p,
+    u_char                             **last,
+    int                                *dec_ok)
+{
+    int rv = 0;
+    char *inner_sni = NULL, *outer_sni = NULL;
+    unsigned char *hrrtok = NULL, *chstart = NULL, *inp = NULL;
+    size_t toklen = 0, chlen = 0, msglen = 0, innerlen = 0;
+
+    ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: checking ECH");
+
+    /* return having done nothing when we're not setup for split-mode ECH */
+    *dec_ok = 0;
+    if (pscf->ech_ssl == NGX_CONF_UNSET_PTR
+        || pscf->ech_ssl == NULL
+        || pscf->ech_ssl->ctx == NULL)
+        return NGX_OK;
+
+    chstart = p;
+    /*
+     * chew up bogus change cipher spec, if one's there when we're
+     * in midst of HRR
+     */
+    if (u->ech_state == 1
+        && p[0] == 20
+        && p[1] == 3
+        && p[2] == 3
+        && p[3] == 0
+        && p[4] == 1
+        && p[5] == 1) {
+        chstart += 6;
+        ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: skipped CCS");
+    }
+    /*
+     * check that we are dealing with a TLSv1.3 ClientHello
+     * and establish CH length (in case of early data)
+     */
+    if (chstart[0] == 22 /* handshake */
+        && chstart[1] == 3 /* tls 1.2 or 1.3 */
+        && (chstart[2] == 3 || chstart[2] == 2 || chstart[2] == 1) /* all ok */
+        && chstart[5] == 1) { /* ClientHello */
+
+        chlen = 5 + (uint8_t)chstart[3] * 256 + (uint8_t)chstart[4];
+        msglen = *last - chstart; /* in case of early data */
+        if (msglen != chlen) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: message (%z) longer than CH (%z)", msglen, chlen);
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: message only has CH (%z)", chlen);
+        }
+        /* we'll at least try for ECH */
+        inp = ngx_pcalloc(c->pool, chlen);
+        if (inp == NULL) {
+            return NGX_ERROR;
+        }
+        innerlen = chlen;
+        if (u->ech_state != 0) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH 2nd go (HRR), toklen = %d", (int)u->hrrtoklen);
+            hrrtok = u->hrrtok;
+            toklen = u->hrrtoklen;
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: ECH 1st time");
+        }
+        rv = SSL_CTX_ech_raw_decrypt(pscf->ech_ssl->ctx, dec_ok,
+                                    &inner_sni, &outer_sni,
+                                    chstart, chlen,
+                                    inp, &innerlen,
+                                    &hrrtok, &toklen);
+        if (u->ech_state == 1) {
+            OPENSSL_free(hrrtok); /* we can free that now */
+            u->hrrtok = NULL;
+        }
+        if (rv != 1) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH decrypt failed (%d)", rv);
+            OPENSSL_free(inner_sni);
+            OPENSSL_free(outer_sni);
+            return NGX_ERROR;
+        }
+        if (*dec_ok == 1) {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH success outer_sni: %s inner_sni: %s",
+                (outer_sni?outer_sni:"NONE"),(inner_sni?inner_sni:"NONE"));
+            if (u->ech_state == 0) {
+                /* store hrrtok from 1st CH, in case needed later */
+                u->hrrtok = hrrtok;
+                u->hrrtoklen = toklen;
+            }
+            /* increment ech_state */
+            u->ech_state += 1;
+            /* swap CH's over, adding back extra data if any */
+            memcpy(chstart, inp, innerlen);
+            if (msglen > chlen) {
+                memcpy(chstart + innerlen, chstart + chlen, msglen - chlen);
+                *last = chstart + innerlen + (msglen - chlen);
+            } else {
+                *last = chstart + innerlen;
+            }
+            c->buffer->last = *last;
+        } else {
+            ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+                "do_ech: ECH decrypt failed (%d)", rv);
+        }
+        OPENSSL_free(inner_sni);
+        OPENSSL_free(outer_sni);
+    } else {
+        ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
+            "do_ech: not a CH or CCS, contentype: %z, h/s type: %z",
+            chstart[0], chstart[5]);
+    }
+    return NGX_OK;
+}
+#endif
+
+
 static void
 ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
     ngx_uint_t do_write)
@@ -1743,11 +1872,9 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
     ngx_stream_upstream_t        *u;
     ngx_stream_proxy_srv_conf_t  *pscf;
 #ifdef SSL_OP_ECH_GREASE
-    ngx_stream_ssl_preread_srv_conf_t  *sscf;
-    ngx_stream_ssl_preread_ctx_t       *ctx;
-    u_char                             *bend;
-    ngx_int_t                           echrv;
-    int                                 dec_ok = 0;
+    u_char                       *bend;
+    ngx_int_t                     echrv;
+    int                           dec_ok = 0;
 #endif
 
     u = s->upstream;
@@ -1850,19 +1977,12 @@ ngx_stream_proxy_process(ngx_stream_session_t *s, ngx_uint_t from_upstream,
             }
 
 #ifdef SSL_OP_ECH_GREASE
-            /* handle split-mode HRR, if needed */
-            sscf = ngx_stream_get_module_srv_conf(s,
-                        ngx_stream_ssl_preread_module);
-            if (n > 0 && from_upstream == 0 && sscf->enabled) {
-                ctx = ngx_stream_get_module_ctx(s,
-                            ngx_stream_ssl_preread_module);
-                if (ctx != NULL && ctx->ech_state == 1) {
-                    bend = b->last + n;
-                    echrv = ngx_stream_do_ech(sscf, ctx, c, b->last,
-                                              &bend, &dec_ok);
-                    if (echrv == NGX_OK && dec_ok == 1) {
-                        n = bend - b->last; /* adjust size */
-                    }
+            /* handle split-mode ECH, if needed */
+            if (n > 0 && from_upstream == 0) {
+                bend = b->last + n;
+                echrv = ngx_stream_do_ech(pscf, u, c, b->last, &bend, &dec_ok);
+                if (echrv == NGX_OK && dec_ok == 1) {
+                    n = bend - b->last; /* adjust size */
                 }
             }
 #endif
@@ -2272,6 +2392,11 @@ ngx_stream_proxy_create_srv_conf(ngx_conf_t *cf)
     conf->ssl_conf_commands = NGX_CONF_UNSET_PTR;
 #endif
 
+#ifdef SSL_OP_ECH_GREASE
+    conf->ech_ssl = NGX_CONF_UNSET_PTR;
+    conf->ech_files = NGX_CONF_UNSET_PTR;
+#endif
+
     return conf;
 }
 
@@ -2368,6 +2493,32 @@ ngx_stream_proxy_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
         return NGX_CONF_ERROR;
     }
 
+#endif
+
+#ifdef SSL_OP_ECH_GREASE
+    ngx_conf_merge_ptr_value(conf->ech_files, prev->ech_files, NULL);
+
+    if (conf->ech_files != NULL && conf->ech_ssl == NGX_CONF_UNSET_PTR) {
+        const SSL_METHOD *meth = NULL;
+        SSL_CTX *sctx = NULL;
+
+        meth = TLS_server_method();
+        if (cf == NULL || cf->log == NULL || meth == NULL) {
+            return NULL;
+        }
+        sctx = SSL_CTX_new(meth);
+        if (sctx == NULL) {
+            return NULL;
+        }
+        conf->ech_ssl = ngx_pcalloc(cf->pool, sizeof(ngx_ssl_t));
+        if (conf->ech_ssl == NULL) {
+            return NULL;
+        }
+        conf->ech_ssl->ctx = sctx;
+        conf->ech_ssl->log = cf->log;
+        if (ngx_ssl_ech_files(cf, conf->ech_ssl, conf->ech_files) != NGX_OK)
+            return NULL;
+    }
 #endif
 
     return NGX_CONF_OK;

@@ -148,6 +148,11 @@ typedef struct {
     unsigned                           connected:1;
     unsigned                           proxy_protocol:1;
     unsigned                           half_closed:1;
+#ifdef SSL_OP_ECH_GREASE
+    ngx_uint_t                         ech_state;
+    u_char                            *hrrtok;
+    size_t                             hrrtoklen;
+#endif
 } ngx_stream_upstream_t;
 
 
