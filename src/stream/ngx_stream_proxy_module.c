@@ -1746,14 +1746,16 @@ ngx_int_t ngx_stream_do_ech(
     unsigned char *hrrtok = NULL, *chstart = NULL, *inp = NULL;
     size_t toklen = 0, chlen = 0, msglen = 0, innerlen = 0;
 
-    ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: checking ECH");
+    ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: checking ECH (state=%z)", u->ech_state);
 
     /* return having done nothing when we're not setup for split-mode ECH */
     *dec_ok = 0;
     if (pscf->ech_ssl == NGX_CONF_UNSET_PTR
         || pscf->ech_ssl == NULL
-        || pscf->ech_ssl->ctx == NULL)
+        || pscf->ech_ssl->ctx == NULL) {
+        ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0, "do_ech: split-mode not configured here");
         return NGX_OK;
+    }
 
     chstart = p;
     /*
@@ -1794,7 +1796,7 @@ ngx_int_t ngx_stream_do_ech(
             return NGX_ERROR;
         }
         innerlen = chlen;
-        if (u->ech_state != 0) {
+        if (u->ech_state == 1) {
             ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
                 "do_ech: ECH 2nd go (HRR), toklen = %d", (int)u->hrrtoklen);
             hrrtok = u->hrrtok;
@@ -1816,12 +1818,13 @@ ngx_int_t ngx_stream_do_ech(
                 "do_ech: ECH decrypt failed (%d)", rv);
             OPENSSL_free(inner_sni);
             OPENSSL_free(outer_sni);
+            ngx_pfree(c->pool, inp);
             return NGX_ERROR;
         }
         if (*dec_ok == 1) {
             ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
-                "do_ech: ECH success outer_sni: %s inner_sni: %s",
-                (outer_sni?outer_sni:"NONE"),(inner_sni?inner_sni:"NONE"));
+                "do_ech: ECH success outer_sni: %s inner_sni: %s, inner len %z",
+                (outer_sni?outer_sni:"NONE"),(inner_sni?inner_sni:"NONE"), innerlen);
             if (u->ech_state == 0) {
                 /* store hrrtok from 1st CH, in case needed later */
                 u->hrrtok = hrrtok;
@@ -1837,13 +1840,15 @@ ngx_int_t ngx_stream_do_ech(
             } else {
                 *last = chstart + innerlen;
             }
-            c->buffer->last = *last;
+            if (c->buffer)
+                c->buffer->last = *last;
         } else {
             ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
                 "do_ech: ECH decrypt failed (%d)", rv);
         }
         OPENSSL_free(inner_sni);
         OPENSSL_free(outer_sni);
+        ngx_pfree(c->pool, inp);
     } else {
         ngx_ssl_error(NGX_LOG_NOTICE, c->log, 0,
             "do_ech: not a CH or CCS, contentype: %z, h/s type: %z",
@@ -2297,6 +2302,12 @@ ngx_stream_proxy_finalize(ngx_stream_session_t *s, ngx_uint_t rc)
             pc->ssl->no_wait_shutdown = 1;
             (void) ngx_ssl_shutdown(pc);
         }
+#endif
+
+#ifdef SSL_OP_ECH_GREASE
+    u->ech_state = 0;
+    OPENSSL_free(u->hrrtok);
+    u->hrrtoklen = 0;
 #endif
 
         ngx_close_connection(pc);
