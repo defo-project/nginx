@@ -363,6 +363,11 @@ ngx_int_t ngx_stream_validate_host(ngx_str_t *host, ngx_pool_t *pool,
 ngx_int_t ngx_stream_find_virtual_server(ngx_stream_session_t *s,
     ngx_str_t *host, ngx_stream_core_srv_conf_t **cscfp);
 
+#ifdef SSL_OP_ECH_GREASE
+ngx_int_t ngx_stream_do_ech(ngx_stream_session_t *s,
+    u_char *p, u_char **last, int *dec_ok);
+#endif
+
 void ngx_stream_init_connection(ngx_connection_t *c);
 void ngx_stream_session_handler(ngx_event_t *rev);
 void ngx_stream_finalize_session(ngx_stream_session_t *s, ngx_uint_t rc);

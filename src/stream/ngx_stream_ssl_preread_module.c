@@ -8,7 +8,6 @@
 #include <ngx_core.h>
 #include <ngx_stream.h>
 
-
 typedef struct {
     ngx_flag_t      enabled;
 } ngx_stream_ssl_preread_srv_conf_t;
@@ -113,6 +112,9 @@ ngx_stream_ssl_preread_handler(ngx_stream_session_t *s)
     ngx_connection_t                   *c;
     ngx_stream_ssl_preread_ctx_t       *ctx;
     ngx_stream_ssl_preread_srv_conf_t  *sscf;
+#ifdef SSL_OP_ECH_GREASE
+    int                                 dec_ok;
+#endif
 
     c = s->connection;
 
@@ -148,6 +150,18 @@ ngx_stream_ssl_preread_handler(ngx_stream_session_t *s)
 
     p = ctx->pos;
     last = c->buffer->last;
+
+
+#ifdef SSL_OP_ECH_GREASE
+    /*
+     * Do split-mode ECH if needed.
+     * Note that if ssl_preread is enabled, this call happens before the
+     * one in the proxy module, but the 2nd call is no harm.
+     */
+    if (ngx_stream_do_ech(s, p, &last, &dec_ok) != NGX_OK)
+        return NGX_ERROR;
+#endif
+
 
     while (last - p >= 5) {
 
@@ -679,7 +693,6 @@ ngx_stream_ssl_preread_create_srv_conf(ngx_conf_t *cf)
     }
 
     conf->enabled = NGX_CONF_UNSET;
-
     return conf;
 }
 
