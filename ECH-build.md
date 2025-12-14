@@ -2,13 +2,6 @@
 
 # NGINX OpenSSL Encrypted Client Hello (ECH) integration.
 
-> [!NOTE]
-> This documentation probably doesn't belong here, nor as a single file, but
-> may be useful to have in one place. TODO: find out where to put the various
-> bits and pieces once those are stable.
-> 
-> Date: 2025-12-04
-
 ECH is specified in
 [draft-ietf-tls-esni](https://datatracker.ietf.org/doc/draft-ietf-tls-esni/).
 This documentation assumes a basic familiarity with the ECH specification.
@@ -87,7 +80,7 @@ used for NGINX configuration.
 ~# mkdir -p /etc/nginx/echkeydir
 ~# chmod 700 /etc/nginx/echkeydir
 ~# cd /etc/nginx/echkeydir
-~# $OSSL ech -public-name example.com -o example.com.pem.ech
+~# $OSSL ech -public_name example.com -out example.com.pem.ech
 ~# cat example.com.pem.ech
 -----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VuBCIEIJi22Im2rJ/lJqzNFZdGfsVfmknXAc8xz3fYPhD0Na5I
@@ -117,7 +110,7 @@ rotation.
 The `dig` example above assumes support for HTTPS RRs, for earlier 
 versions of `dig` one would see something like:
 
-``
+```bash
 $ dig +short -t type65 foo.example.com
 \# 165 00010000040004D56C6C65000500820080FE0D003CF700200020189E 5FD51BC7527C67CB4883B4A79CC39642FE446965A473B7AB1E3A45F3 3058000400010001000D636F7665722E6465666F2E69650000FE0D00 3C44002000201DE542C51EF072BD7250FB486E812A697130C844602F D3148347457C685B1916000400010001000D636F7665722E6465666F 2E69650000000600102A00C6C0000001160005000000000010
 ```
@@ -137,7 +130,7 @@ the example below does this.
 http {
     log_format withech '$remote_addr - $remote_user [$time_local] '
                     '"$request" $status $body_bytes_sent '
-                    '"$http_referer" "$http_user_agent" "$ech_status"';
+                    '"$http_referer" "$http_user_agent" "$ssl_ech_status"';
     access_log          /var/log/nginx/access.log withech;
     ssl_ech_file       /etc/nginx/echkeydir/example.com.pem.ech;
     server {
@@ -338,14 +331,46 @@ wanted to debug into the ``ngx_ssl_ech_files()`` function:
     [Detaching after fork from child process 522259]
 ```
 
-## The DEfO-project NGINX
+# Content from here on does not apply to the upstreamed code in the NGINX master
 
-As mentioned, we have a proof-of-concept NGINX repository as part of
-the [DEfO project](https://defo.ie). This contains the upstream ECH
-shared-mode code, plus code for handling ECH split-mode via the 
-(not yet agreed with OpenSSL maintainers) split-mode API will be
-added back soon.
+## The DEfO-project NGINX, with ECH split-mode
 
+This [DEfO project](https://defo.ie) repo contains the NGINX upstream'd ECH
+shared-mode code, plus Proof-of-Concept (PoC) code for handling ECH split-mode
+via APIs not yet agreed with either the OpenSSL or NGINX maintainers.
+
+The split-mode PoC can be used via the NGINX stream proxy module and/or the
+preread module. In both cases, a `stream` server can include one or more
+`proxy_ssl_ech_split_file` directives that name an ECH PEM file, just as is
+done with the `ssl_ech_file` directive described above.  (Note that
+combinations of shared-mode and split-mode ECH for the same servers are not
+really tested as of now - some test setups work, but we don't claim that's all
+worked out correctly.)
+
+There is a
+[test script](https://github.com/defo-project/ech-dev-utils/blob/main/scripts/testsplitmode.sh)
+and
+[config](https://github.com/defo-project/ech-dev-utils/blob/main/configs/nginxsplit.conf)
+that illustrates how to use ECH split-mode with NGINX.
+
+The code changes for split-mode add the `ngx_stream_do_ech()` fuction to
+`src/stream/ngx_stream_proxy_module.c` which examines the TLS packet when
+split-mode is configured and attempts ECH split-mode decryption (via
+`SSL_CTX_ech_raw_decrypt()`) and replaces the outer ClientHello with the inner
+when ECH decryption succeeds.  The `ngx_stream_do_ech()` function prototype is
+added to `src/stream/ngx_stream.h`.  All split-mode code is protected via
+`#ifdef SSL_OP_ECH_GREASE` as is used in the upstream NGINX shared-mode
+support.
+
+If the preread module is enabled (via `ssl_preread` then a call to
+`ngx_stream_do_ech()` within `src/stream/ngx_stream_ssl_preread.c` allows
+routing the TLS session via the inner ClientHello's SNI.
+
+Note again that the `SSL_CTX_ech_raw_decrypt()` API (used by
+`ngx_stream_do_ech()`) has not yet been agreed with OpenSSL maintainers, so a)
+that may change, possibly radically, and b) might not be part of an OpenSSL
+release at the same time as ECH shared-mode support is part of an OpenSSL
+release.
 
 ## BoringSSL and file globbing branch
 
