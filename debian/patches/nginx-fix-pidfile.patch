@@ -43,7 +43,7 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 +            return 1;
 +	    }
      }
-+    if (child_pid > NGX_OK) {
++    if (child_pid > NGX_OK)
 +        exit(0);
  
      if (ngx_log_redirect_stderr(cycle) != NGX_OK) {
