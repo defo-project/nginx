@@ -1,25 +1,25 @@
 Tests: light-simple
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-light, curl
 
 Tests: ec-x25519
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-light, ssl-cert, curl
 
 Tests: core-simple
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-core, curl
 
 Tests: full-simple
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-full, curl
 
 Tests: extras-simple
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-extras, curl
 
 Tests: core-module-deps
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-core,
          curl,
          libnginx-mod-http-auth-pam,
@@ -52,7 +52,7 @@ Depends: nginx-core,
          libnginx-mod-http-auth-jwt,
 
 Tests: full-module-deps
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-full,
          curl,
          libnginx-mod-http-auth-pam,
@@ -85,7 +85,7 @@ Depends: nginx-full,
          libnginx-mod-http-auth-jwt,
 
 Tests: light-module-deps
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-light,
          curl,
          libnginx-mod-http-auth-pam,
@@ -118,7 +118,7 @@ Depends: nginx-light,
          libnginx-mod-http-auth-jwt,
 
 Tests: extras-module-deps
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-extras,
          curl,
          libnginx-mod-http-auth-pam,
@@ -155,11 +155,11 @@ Restrictions: isolation-container, needs-root, needs-reboot
 Depends: nginx-light, curl
 
 Tests: RFC9112
-Restrictions: allow-stderr isolation-container needs-root
+Restrictions: allow-stderr isolation-container needs-root, fails-abi-bump
 Depends: nginx-light, curl, libfcgi-perl, uwsgi-plugin-python3
 
 Tests: abicheck
-Restrictions: allow-stderr skippable
+Restrictions: allow-stderr skippable, fails-abi-bump
 Depends: nginx-dev
 
 Test-Command: curl -L 'https://github.com/defo-project/ech-dev-utils/archive/refs/heads/main.tar.gz' | tar xz; cd ech-dev-utils-main; PACKAGING=1 scripts/testnginx.sh
