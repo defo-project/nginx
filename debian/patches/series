@@ -1,4 +1,4 @@
 nginx-fix-pidfile.patch
 nginx-ssl_cert_cb_yield.patch
 override-uname.patch
-fix-cache-line-size-for-loongarch64.patch
+#fix-cache-line-size-for-loongarch64.patch

@@ -83,10 +83,10 @@ override_dh_auto_configure-arch:
 	mkdir -p $(BUILDDIR_bin)
 	cp -Pa $(CURDIR)/auto $(BUILDDIR_bin)/
 	cp -Pa $(CURDIR)/conf $(BUILDDIR_bin)/
-	cp -Pa $(CURDIR)/configure $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/auto/configure $(BUILDDIR_bin)/
 	cp -Pa $(CURDIR)/contrib $(BUILDDIR_bin)/
 	cp -Pa $(CURDIR)/src $(BUILDDIR_bin)/
-	cp -Pa $(CURDIR)/man $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/docs/man $(BUILDDIR_bin)/
 	cd $(BUILDDIR_bin) && ./configure $(bin_configure_flags)
 
 override_dh_auto_configure-indep:
