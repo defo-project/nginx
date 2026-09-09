@@ -1,0 +1,89 @@
+#!/bin/sh
+set -e
+
+# This test compares the nginx-dev header files shipped by the package under
+# test against all older versions currently available from the configured APT
+# repositories.
+#
+# The goal is to detect unintended API changes. If no differences are found in
+# the exported header files, the package is very likely ABI-safe for
+# third-party modules built against previous versions, as they will continue to
+# see the same public interface.
+#
+pkg=nginx-dev
+localver="$(dpkg-query -W -f='${Version}\n' "$pkg")"
+
+local_abi="$(
+  sed -n 's/^nginx:abi=//p' \
+      /usr/share/nginx/src/debian/libnginx-mod.abisubstvars
+)"
+
+tmpdir="${AUTOPKGTEST_TMP:-/tmp}/download"
+rm -rf "$tmpdir"
+mkdir -p "$tmpdir"
+cd "$tmpdir"
+
+headers_list="$tmpdir/headers-list"
+trap 'rm -rf "$tmpdir"' EXIT INT HUP TERM
+
+versions="$(
+  apt-cache madison "$pkg" |
+    awk -F'|' '
+      {
+        ver=$2
+        gsub(/^[ \t]+|[ \t]+$/, "", ver)
+        if (ver != "") print ver
+      }' |
+    sort -u
+)"
+
+for ver in $versions; do
+  echo "Downloading $pkg=$ver"
+  apt-get download "$pkg=$ver"
+
+  deb="$(ls "${pkg}_${ver}"*.deb)"
+  unpackdir="$tmpdir/unpacked/$ver"
+  mkdir -p "$unpackdir"
+  dpkg-deb -R "$deb" "$unpackdir"
+done
+
+failed=0
+compared=0
+
+for ver in $versions; do
+  old_abi="$(
+    sed -n 's/^nginx:abi=//p' \
+        "$tmpdir/unpacked/$ver/usr/share/nginx/src/debian/libnginx-mod.abisubstvars"
+  )"
+
+  if [ "$local_abi" != "$old_abi" ]; then
+    echo "Skipping $ver ($old_abi): local $localver has $local_abi"
+    continue
+  fi
+
+  echo "Comparing local version $localver against apt version $ver"
+  compared=$((compared + 1))
+
+  oldsrc="$tmpdir/unpacked/$ver/usr/share/nginx/src/src"
+  newsrc="/usr/share/nginx/src/src"
+
+  find "$oldsrc" "$newsrc" -type f -name '*.h' |
+    sed "s#^$oldsrc/##; s#^$newsrc/##" |
+    sort -u > "$headers_list"
+
+  while IFS= read -r f; do
+    diff -uN "$oldsrc/$f" "$newsrc/$f" || failed=1
+  done < "$headers_list"
+done
+
+if [ "$compared" -eq 0 ]; then
+  echo "All available versions have a different ABI, nothing to compare."
+  exit 77
+fi
+
+if [ "$failed" -ne 0 ]; then
+  echo "Available versions declare the same ABI but have a different ABI!"
+  exit 1
+fi
+
+exit 0

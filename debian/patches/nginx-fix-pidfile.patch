@@ -7,7 +7,7 @@ Last-Update: 2020-06-24
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/src/core/nginx.c
 +++ b/src/core/nginx.c
-@@ -343,12 +343,18 @@ main(int argc, char *const *argv)
+@@ -340,14 +340,21 @@
          ngx_process = NGX_PROCESS_MASTER;
      }
  
@@ -24,10 +24,14 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 +    child_pid--;
 +
      if (!ngx_inherited && ccf->daemon) {
-         if (ngx_daemon(cycle->log) != NGX_OK) {
+-        if (ngx_daemon(cycle->log) != NGX_OK) {
++        child_pid = ngx_daemon(cycle->log);
++        if (child_pid == NGX_ERROR) {
              return 1;
-@@ -375,9 +381,19 @@ main(int argc, char *const *argv)
-     }
+         }
+ 
+@@ -360,8 +367,19 @@
+ 
  #endif
  
 -    if (ngx_create_pidfile(&ccf->pid, cycle->log) != NGX_OK) {
@@ -38,16 +42,16 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 +     * For NGX_WIN32 always write the PID file
 +     * For others, only write it from the parent process */
 +    if (child_pid < NGX_OK || child_pid > NGX_OK) {
-+	    ngx_pid = child_pid > NGX_OK ? child_pid : ngx_pid;
++	ngx_pid = child_pid > NGX_OK ? child_pid : ngx_pid;
 +        if (ngx_create_pidfile(&ccf->pid, cycle->log) != NGX_OK) {
 +            return 1;
-+	    }
-     }
-+    if (child_pid > NGX_OK)
++	}
++    }
++    if (child_pid > NGX_OK) {
 +        exit(0);
+     }
  
      if (ngx_log_redirect_stderr(cycle) != NGX_OK) {
-         return 1;
 --- a/src/os/unix/ngx_daemon.c
 +++ b/src/os/unix/ngx_daemon.c
 @@ -7,14 +7,17 @@
@@ -69,7 +73,7 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
      case -1:
          ngx_log_error(NGX_LOG_EMERG, log, ngx_errno, "fork() failed");
          return NGX_ERROR;
-@@ -23,7 +26,8 @@ ngx_daemon(ngx_log_t *log)
+@@ -23,7 +26,8 @@
          break;
  
      default:

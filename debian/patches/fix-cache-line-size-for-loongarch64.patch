@@ -1,0 +1,35 @@
+Origin: https://github.com/nginx/nginx/commit/be84ac8bda2265d254f3ead9c3f0ba1d78a79319
+From be84ac8bda2265d254f3ead9c3f0ba1d78a79319 Mon Sep 17 00:00:00 2001
+From: Miao Wang <shankerwangmiao@users.noreply.github.com>
+Date: Mon, 22 Jun 2026 15:49:26 +0800
+Subject: [PATCH] Configure: set cache line size for loongarch64
+Forwarded: not-needed
+
+Section 8.2 table 54, registers 0x11 - 0x14 (2^6 = 64 bytes)
+<https://loongson.github.io/LoongArch-Documentation/Loongson-3A5000-usermanual-EN.html#instruction-set-features-implemented-in-3a5000>
+
+There is no intent to cover 32-bit LoongArch which acceptably falls
+through to the default.
+---
+ auto/os/conf | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/auto/os/conf b/auto/os/conf
+index bb0ce4ef2..f241d8199 100644
+--- a/auto/os/conf
++++ b/auto/os/conf
+@@ -130,6 +130,11 @@ case "$NGX_MACHINE" in
+         NGX_MACH_CACHE_LINE=256
+     ;;
+ 
++    loongarch64)
++        have=NGX_ALIGNMENT value=16 . auto/define
++        NGX_MACH_CACHE_LINE=64
++    ;;
++
+     *)
+         have=NGX_ALIGNMENT value=16 . auto/define
+         NGX_MACH_CACHE_LINE=32
+-- 
+2.53.0
+

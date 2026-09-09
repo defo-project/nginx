@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Aggregate RFC 9112 regression scenarios into a single autopkgtest wrapper.
+# This keeps the individual test coverage intact while reducing overall test
+# runtime by grouping related proxy, FastCGI, and uWSGI checks together.
+
+set -e
+
+dir=$(dirname "$0")
+
+ex=0
+for name in $(ls -1 "${dir}/RFC9112."*); do
+  name=$(basename "${name}")
+  echo "########## Running ${name} ##########"
+  if ! "${dir}/${name}"; then
+    ex=1
+  fi
+  echo
+done
+
+exit "${ex}"

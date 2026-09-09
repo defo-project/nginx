@@ -8,4 +8,4 @@
 # changes without upgrading the upstream nginx version, e.g. security updates
 # in oldstable
 
-nginx:abi=nginx-abi-1.26.3-1
+nginx:abi=nginx-abi-1.30.4-2

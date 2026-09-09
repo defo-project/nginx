@@ -21,10 +21,8 @@ if invoke-rc.d --quiet nginx status >/dev/null; then
   invoke-rc.d nginx upgrade || invoke-rc.d nginx restart
   exit $?
 else
-  if [ -z "$(ss -nlt 'sport = 80' | grep -v ^State)" ]; then
-    invoke-rc.d nginx start || exit $?
-  else
-    echo "Not attempting to start NGINX, port 80 is already in use."
+  if ! invoke-rc.d nginx start; then
+    echo "Failed to start NGINX in postinst script, please check the logs" >&2
     exit 0
   fi
 fi

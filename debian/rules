@@ -2,127 +2,123 @@
 export DH_VERBOSE=1
 
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-debian_cflags:=$(shell dpkg-buildflags --get CFLAGS) -fPIC $(shell dpkg-buildflags --get CPPFLAGS)
-debian_ldflags:=$(shell dpkg-buildflags --get LDFLAGS) -fPIC
 
-FLAVOURS := bin
+# Configuration used to build Nginx itself, also included in the
+# nginx-dev package for building third-party modules.
+# Contains Debian-specific options --override-* added by the patch
+# d/p/override-uname.patch, which fixes a reproducible build.
+# A method based on command substitution is used to ensure that the
+# configuration flags in the nginx-dev package are architecture-independent.
+# The same approach is applied to the --with-cc-opt and --with-ld-opt options.
+# Note: the value --override-release=3.16.0 is the minimum kernel version we
+# expect the compiled nginx binary to run on (Debian 8).
+src_configure_flags := \
+	--override-system="$$(dpkg-architecture --query DEB_HOST_GNU_SYSTEM | sed 's/-.*$$//; s/^./\U&/; s/Gnu/\U&/g;')" \
+	--override-release="3.16.0" \
+	--override-machine="$$(dpkg-architecture --query DEB_HOST_GNU_CPU)" \
+	--with-cc-opt="$$(dpkg-buildflags --get CFLAGS) -fPIC $$(dpkg-buildflags --get CPPFLAGS)" \
+	--with-ld-opt="$$(dpkg-buildflags --get LDFLAGS) -fPIC" \
+	--prefix=/usr/share/nginx \
+	--conf-path=/etc/nginx/nginx.conf \
+	--http-log-path=/var/log/nginx/access.log \
+	--error-log-path=stderr \
+	--lock-path=/var/lock/nginx.lock \
+	--pid-path=/run/nginx.pid \
+	--modules-path=/usr/lib/nginx/modules \
+	--http-client-body-temp-path=/var/lib/nginx/body \
+	--http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+	--http-proxy-temp-path=/var/lib/nginx/proxy \
+	--http-scgi-temp-path=/var/lib/nginx/scgi \
+	--http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+	--with-compat \
+	--with-debug \
+	--with-pcre-jit \
+	--with-http_ssl_module \
+	--with-http_stub_status_module \
+	--with-http_realip_module \
+	--with-http_auth_request_module \
+	--with-http_v2_module \
+	--with-http_v3_module \
+	--with-http_dav_module \
+	--with-http_slice_module \
+	--with-threads
 
-BASEDIR = $(CURDIR)
-$(foreach flavour,$(FLAVOURS) src ,$(eval BUILDDIR_$(flavour) = $(CURDIR)/debian/build-$(flavour)))
-
-DEB_BUILD_ARCH ?=$(shell dpkg-architecture -qDEB_BUILD_ARCH)
-ifeq ($(DEB_BUILD_ARCH),sparc)
-	debian_cflags += -m32 -mcpu=ultrasparc
-endif
-
-ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	NUMJOBS = $(patsubst parallel=%,%,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
-	MAKEFLAGS += -j$(NUMJOBS)
-endif
-
-# configure flags
-basic_configure_flags := \
-			--prefix=/usr/share/nginx \
-			--conf-path=/etc/nginx/nginx.conf \
-			--http-log-path=/var/log/nginx/access.log \
-			--error-log-path=stderr \
-			--lock-path=/var/lock/nginx.lock \
-			--pid-path=/run/nginx.pid \
-			--modules-path=/usr/lib/nginx/modules \
-			--http-client-body-temp-path=/var/lib/nginx/body \
-			--http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
-			--http-proxy-temp-path=/var/lib/nginx/proxy \
-			--http-scgi-temp-path=/var/lib/nginx/scgi \
-			--http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
-			--with-compat \
-			--with-debug \
-			--with-pcre-jit \
-			--with-http_ssl_module \
-			--with-http_stub_status_module \
-			--with-http_realip_module \
-			--with-http_auth_request_module \
-			--with-http_v2_module \
-			--with-http_v3_module \
-			--with-http_dav_module \
-			--with-http_slice_module \
-			--with-threads
-
-common_configure_flags := \
-			--with-cc-opt="$(debian_cflags)" \
-			--with-ld-opt="$(debian_ldflags)" \
-			$(basic_configure_flags)
-
+# Configuration used to build Nginx and it's internal modules.
 bin_configure_flags := \
-			$(common_configure_flags) \
-			--with-http_addition_module \
-			--with-http_flv_module \
-			--with-http_gunzip_module \
-			--with-http_gzip_static_module \
-			--with-http_mp4_module \
-			--with-http_random_index_module \
-			--with-http_secure_link_module \
-			--with-http_sub_module \
-			--with-mail_ssl_module \
-			--with-stream_ssl_module \
-			--with-stream_ssl_preread_module \
-			--with-stream_realip_module \
-			--with-http_geoip_module=dynamic \
-			--with-http_image_filter_module=dynamic \
-			--with-http_perl_module=dynamic \
-			--with-http_xslt_module=dynamic \
-			--with-mail=dynamic \
-			--with-stream=dynamic \
-			--with-stream_geoip_module=dynamic
+	$(src_configure_flags) \
+	--with-http_addition_module \
+	--with-http_flv_module \
+	--with-http_gunzip_module \
+	--with-http_gzip_static_module \
+	--with-http_mp4_module \
+	--with-http_random_index_module \
+	--with-http_secure_link_module \
+	--with-http_sub_module \
+	--with-mail_ssl_module \
+	--with-stream_ssl_module \
+	--with-stream_ssl_preread_module \
+	--with-stream_realip_module \
+	--with-http_geoip_module=dynamic \
+	--with-http_image_filter_module=dynamic \
+	--with-http_perl_module=dynamic \
+	--with-http_xslt_module=dynamic \
+	--with-mail=dynamic \
+	--with-stream=dynamic \
+	--with-stream_geoip_module=dynamic
 
 %:
 	dh $@ --without autoreconf
 
-override_dh_auto_configure: $(foreach flavour,$(FLAVOURS),config.arch.$(flavour)) config.src
-override_dh_auto_build:     $(foreach flavour,$(FLAVOURS),build.arch.$(flavour)) build.src
-override_dh_clean:          $(foreach flavour,$(FLAVOURS),clean.$(flavour)) clean.src
+
+BUILDDIR_bin=$(CURDIR)/debian/build-bin
+BUILDDIR_src=$(CURDIR)/debian/build-src
+
+override_dh_clean:
+	dh_testdir
+	rm -rf $(BUILDDIR_src) $(BUILDDIR_bin)
 	dh_clean
 
-override_dh_install:
-	dh_install
-	DH_AUTOSCRIPTDIR=$(CURDIR)/debian/autoscripts debian/debhelper/dh_nginx --in-nginx-tree
+override_dh_auto_configure-arch:
+	dh_testdir
+	mkdir -p $(BUILDDIR_bin)
+	cp -Pa $(CURDIR)/auto $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/conf $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/configure $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/contrib $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/src $(BUILDDIR_bin)/
+	cp -Pa $(CURDIR)/man $(BUILDDIR_bin)/
+	cd $(BUILDDIR_bin) && ./configure $(bin_configure_flags)
 
-override_dh_installinit:
-	dh_installinit --no-stop-on-upgrade --no-start --name=nginx
+override_dh_auto_configure-indep:
+	dh_testdir
+	mkdir -p $(BUILDDIR_src)
 
-override_dh_installsystemd:
-	dh_installsystemd --name=nginx
+override_dh_auto_build-arch:
+	dh_testdir
+	$(MAKE) -C $(BUILDDIR_bin) build
 
-override_dh_installlogrotate:
-	dh_installlogrotate --package nginx-common --name=nginx
-
-override_dh_gencontrol:
-	dh_gencontrol -- -Tdebian/substvars -Tdebian/libnginx-mod.abisubstvars
-
-build.arch.%:
-	$(MAKE) -C $(BUILDDIR_$*) build
-
-build.src:
+override_dh_auto_build-indep: export flags=$(src_configure_flags)
+override_dh_auto_build-indep:
+	dh_testdir
 	cp -Pa $(CURDIR)/auto $(BUILDDIR_src)/
 	sed -i '/^# create Makefile/,/^END$$/d' $(BUILDDIR_src)/auto/make $(BUILDDIR_src)/auto/init $(BUILDDIR_src)/auto/install
 	find $(CURDIR)/src -type f -name '*.h' -printf 'src/%P\0' | tar -C $(CURDIR) --null --files-from - -c | tar -C $(BUILDDIR_src)/ -x
 	if [ -e $(CURDIR)/configure ]; then cp $(CURDIR)/configure $(BUILDDIR_src)/; fi
-	echo "NGX_CONF_FLAGS=(" $(basic_configure_flags) ")" > $(BUILDDIR_src)/conf_flags
+	echo "NGX_CONF_FLAGS=( $${flags} )" > $(BUILDDIR_src)/conf_flags
 	pod2man debian/debhelper/dh_nginx > $(BUILDDIR_src)/dh_nginx.1
 
-config.arch.%:
-	dh_testdir
-	mkdir -p $(BUILDDIR_$*)
-	cp -Pa $(CURDIR)/auto $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/conf $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/auto/configure $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/contrib $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/src $(BUILDDIR_$*)/
-	cp -Pa $(CURDIR)/docs/man $(BUILDDIR_$*)/
-	cd $(BUILDDIR_$*) && ./configure $($*_configure_flags)
+override_dh_install-arch:
+	dh_install
+	DH_AUTOSCRIPTDIR=$(CURDIR)/debian/autoscripts debian/debhelper/dh_nginx --in-nginx-tree
 
-config.src:
-	dh_testdir
-	mkdir -p $(BUILDDIR_src)
+override_dh_installinit-indep:
+	dh_installinit --no-stop-on-upgrade --no-start --name=nginx
 
-clean.%:
-	rm -rf $(BUILDDIR_$*)
+override_dh_installsystemd-indep:
+	dh_installsystemd --no-stop-on-upgrade --no-start --name=nginx
+
+override_dh_installlogrotate-indep:
+	dh_installlogrotate --package nginx-common --name=nginx
+
+override_dh_gencontrol:
+	dh_gencontrol -- -Tdebian/substvars -Tdebian/libnginx-mod.abisubstvars
