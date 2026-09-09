@@ -14,11 +14,9 @@ Here we added support for such usage in NGINX 3rd-party modules
 (like ngx_lua) in NGINX's event handlers for downstream SSL
 connections.
 
-Index: nginx/src/event/ngx_event_openssl.c
-===================================================================
---- nginx.orig/src/event/ngx_event_openssl.c
-+++ nginx/src/event/ngx_event_openssl.c
-@@ -1969,6 +1969,23 @@ ngx_ssl_try_early_data(ngx_connection_t
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -2317,6 +2317,23 @@ ngx_ssl_handshake(ngx_connection_t *c)
          return NGX_AGAIN;
      }
  
@@ -42,12 +40,10 @@ Index: nginx/src/event/ngx_event_openssl.c
      err = (sslerr == SSL_ERROR_SYSCALL) ? ngx_errno : 0;
  
      c->ssl->no_wait_shutdown = 1;
-@@ -2794,6 +2811,21 @@ ngx_ssl_write(ngx_connection_t *c, u_cha
- 
-         if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+@@ -3291,6 +3308,21 @@ ngx_ssl_write(ngx_connection_t *c, u_char *data, size_t size)
              return NGX_ERROR;
-+        }
-+
+         }
+ 
 +        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
 +            return NGX_ERROR;
 +        }
@@ -61,6 +57,8 @@ Index: nginx/src/event/ngx_event_openssl.c
 +
 +        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
 +            return NGX_ERROR;
-         }
- 
++        }
++
          /*
+          * we do not set the timer because there is already
+          * the write event timer

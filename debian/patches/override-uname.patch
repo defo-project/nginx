@@ -18,7 +18,7 @@ index 6a6e990..2743c15 100644
  CC=${CC:-cc}
  CPP=
  NGX_OBJS=objs
-@@ -206,6 +210,10 @@ do
+@@ -213,6 +217,10 @@ do
  
          --crossbuild=*)                  NGX_PLATFORM="$value"      ;;
  
@@ -42,10 +42,8 @@ index bc0556b..4c85efd 100644
      | sed -n -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/ \
                                                   \1*256*256+\2*256+\3/p' \
               -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1*256*256+\2*256/p'`))
-diff --git a/configure b/configure
-index 5b88ebb..89d1e62 100755
---- a/configure
-+++ b/configure
+--- a/auto/configure
++++ b/auto/configure
 @@ -27,9 +27,21 @@ fi
  if test -z "$NGX_PLATFORM"; then
      echo "checking for OS"

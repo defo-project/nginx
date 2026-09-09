@@ -7,7 +7,7 @@ Last-Update: 2020-06-24
 This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
 --- a/src/core/nginx.c
 +++ b/src/core/nginx.c
-@@ -340,14 +340,21 @@
+@@ -343,14 +343,21 @@ main(int argc, char *const *argv)
          ngx_process = NGX_PROCESS_MASTER;
      }
  
@@ -30,8 +30,8 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
              return 1;
          }
  
-@@ -360,8 +367,19 @@
- 
+@@ -375,8 +382,19 @@ main(int argc, char *const *argv)
+     }
  #endif
  
 -    if (ngx_create_pidfile(&ccf->pid, cycle->log) != NGX_OK) {
@@ -73,7 +73,7 @@ This patch header follows DEP-3: http://dep.debian.net/deps/dep3/
      case -1:
          ngx_log_error(NGX_LOG_EMERG, log, ngx_errno, "fork() failed");
          return NGX_ERROR;
-@@ -23,7 +26,8 @@
+@@ -23,7 +26,8 @@ ngx_daemon(ngx_log_t *log)
          break;
  
      default:
