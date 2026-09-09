@@ -28,11 +28,13 @@ trap 'rm -rf "$tmpdir"' EXIT INT HUP TERM
 
 versions="$(
   apt-cache madison "$pkg" |
-    awk -F'|' '
+    awk -F'|' -v pkg="$pkg" '
       {
+        name=$1
         ver=$2
+        gsub(/^[ \t]+|[ \t]+$/, "", name)
         gsub(/^[ \t]+|[ \t]+$/, "", ver)
-        if (ver != "") print ver
+        if (name == pkg && ver != "") print ver
       }' |
     sort -u
 )"

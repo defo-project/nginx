@@ -1,5 +1,5 @@
 #!/bin/sh
-# version 20260804
+# version 20260807
 
 # Generic test that verifies that all installed libnginx-mod-* packages depend
 # on the nginx ABI and that nginx is running with the given module(s):
@@ -22,7 +22,7 @@ cd "${AUTOPKGTEST_TMP}"
 packages="$(dpkg-query -W \
   -f='${binary:Package}\t${db:Status-Status}\n' \
   'libnginx-mod-*' 2>/dev/null |
-  awk -F '\t' '$2 == "installed" { print $1 }')"
+  awk -F '\t' '$2 == "installed" && $1 !~ /-dev(:[^:]*)?$/ { print $1 }')"
 
 if [ -z "${packages}" ]; then
   echo "MISS no installed libnginx-mod-* package found"
