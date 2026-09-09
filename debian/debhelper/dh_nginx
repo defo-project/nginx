@@ -57,6 +57,25 @@ sub nginx_modules_conf_installdir
 	return "usr/share/nginx/modules-available/"
 }
 
+sub module_depends
+{
+	my ($module_file) = @_;
+	open(my $nm_out, "-|", dpkg_architecture_value("DEB_BUILD_GNU_TYPE") . "-nm", "--dynamic", "--undefined-only", "--format=just-symbols", $module_file);
+	my @deps;
+	while (my $line = <$nm_out>) {
+		chomp($line);
+		if ($line =~ "^ngx_stream_") {
+			push @deps, "libnginx-mod-stream";
+		} elsif ($line =~ "^ndk_") {
+			push @deps, "libnginx-mod-http-ndk";
+		}
+	}
+	close($nm_out);
+	my %seen;
+	@deps = grep { !$seen{$_}++ } @deps;
+	return join(", ", @deps);
+}
+
 =head1 SYNOPSIS
 
 B<dh_nginx> [S<I<debhelper options>>] [B<-n>|B<--noscripts>] [B<--in-nginx-tree>]
@@ -122,7 +141,7 @@ rename files.
 
 =head3 I<arguments>
 
-Is inrerpreted as optional arguments if any, currently not used.
+Is interpreted as optional arguments if any, currently not used.
 
 =head2 MODULES
 
@@ -181,6 +200,7 @@ foreach my $package ((@{$dh{DOPACKAGES}}))
 {
 	my %PACKAGE_TYPE = (
 		has_a_module => [],
+		module_files => [],
 	);
 
 	my $file = pkgfile($package, "nginx");
@@ -224,6 +244,7 @@ foreach my $package ((@{$dh{DOPACKAGES}}))
 							complex_doit("chmod","755","$modinstalldir");
 						}
 						complex_doit("cp", $source, $modinstalldir);
+						push @{$PACKAGE_TYPE{'module_files'}}, $source;
 						next;
 					}
 
@@ -271,6 +292,7 @@ foreach my $package ((@{$dh{DOPACKAGES}}))
 			close(MOD_CONF);
 			chmod(0644, "$installdir/$conf_name") or error("chmod(0644, $installdir/$conf_name): $!");
 			push @{$PACKAGE_TYPE{'has_a_module'}}, "$conf_name:$prio-$conf_name";
+			push @{$PACKAGE_TYPE{'module_files'}}, "$modinstalldir/ngx_${modulepath}_module.so";
 		} else {
 			verbose_print("$package is not a nginx module because $modinstalldir/ngx_${modulepath}_module.so not found");
 			verbose_print("If it is not correct, check if the module is installed before invoking this script");
@@ -286,6 +308,16 @@ foreach my $package ((@{$dh{DOPACKAGES}}))
 			warning("Package $package appears to be an Nginx module. It should comply to the package naming scheme libnginx-mod-<modulename>\n");
 		}
 		addsubstvar($package, "misc:Depends", nginx_depends());
+		foreach my $module_file (@{$PACKAGE_TYPE{'module_files'}})
+		{
+			my $deps = module_depends($module_file);
+			if ($deps) {
+				addsubstvar($package, "misc:Depends", $deps);
+			}
+			if ($nginx_in_tree) {
+				addsubstvar($package, "misc:Depends", "nginx (>= \${source:Version}), nginx (<< \${source:Version}.1~),");
+			}
+		}
 
 		my $modules = "";
 		foreach my $module (@{$PACKAGE_TYPE{'has_a_module'}})

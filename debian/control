@@ -1,30 +1,25 @@
 Source: nginx
 Section: httpd
-Priority: optional
 Maintainer: Debian Nginx Maintainers <pkg-nginx-maintainers@alioth-lists.debian.net>
 Uploaders: Jan Mojžíš <janmojzis@debian.org>
-Build-Depends: debhelper-compat (= 13),
-               libexpat-dev,
-               libgd-dev,
-               libgeoip-dev,
-               libpcre2-dev,
-               libperl-dev,
-               libssl-dev,
-               libxslt1-dev,
-               po-debconf,
-               zlib1g-dev
-Standards-Version: 4.7.0
+Build-Depends: debhelper-compat (= 14)
+Build-Depends-Arch: libexpat-dev,
+                    libgd-dev,
+                    libgeoip-dev,
+                    libpcre2-dev,
+                    libperl-dev,
+                    libssl-dev,
+                    libxslt1-dev,
+                    zlib1g-dev
+Build-Depends-Indep: po-debconf
+Standards-Version: 4.7.4
 Homepage: https://nginx.org
 Vcs-Git: https://salsa.debian.org/nginx-team/nginx.git
 Vcs-Browser: https://salsa.debian.org/nginx-team/nginx
-Rules-Requires-Root: no
 
 Package: nginx
 Architecture: any
-Depends: ${misc:Depends},
-         ${shlibs:Depends},
-         iproute2,
-         nginx-common (= ${source:Version}),
+Depends: nginx-common (= ${source:Version}),
 Breaks: nginx-light (<< 1.22.1-6~), nginx-extras (<< 1.22.1-6~), nginx-core (<< 1.22.1-6~),
 Replaces: nginx-light (<< 1.22.1-6~), nginx-extras (<< 1.22.1-6~), nginx-core (<< 1.22.1-6~),
 Provides: httpd, httpd-cgi, ${nginx:abi}
@@ -37,7 +32,6 @@ Package: nginx-doc
 Architecture: all
 Multi-Arch: foreign
 Section: doc
-Depends: ${misc:Depends}
 Description: small, powerful, scalable web/proxy server - documentation
  Nginx ("engine X") is a high-performance web and reverse proxy server
  created by Igor Sysoev. It can be used both as a standalone web server
@@ -50,8 +44,7 @@ Breaks: nginx (<< 1.22.1-8)
 Replaces: nginx (<< 1.22.1-8)
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}
-Suggests: fcgiwrap, nginx-doc, ssl-cert
+Suggests: fcgiwrap, nginx-doc, ssl-cert, logrotate
 Description: small, powerful, scalable web/proxy server - common files
  Nginx ("engine X") is a high-performance web and reverse proxy server
  created by Igor Sysoev. It can be used both as a standalone web server
@@ -63,7 +56,8 @@ Description: small, powerful, scalable web/proxy server - common files
 Package: nginx-dev
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}, ${S:Build-Depends},
+Depends: ${S:Build-Depends},
+         ${S:Build-Depends-Arch},
          ${nginx:abi},
          nginx (<< ${source:Version}.1~),
          nginx (>= ${source:Version}),
@@ -79,22 +73,14 @@ Description: nginx web/proxy server - development headers
 
 Package: nginx-core
 Architecture: all
-Depends: libnginx-mod-http-geoip (>= ${source:Version}),
-         libnginx-mod-http-geoip (<< ${source:Version}.1~),
-         libnginx-mod-http-image-filter (>= ${source:Version}),
-         libnginx-mod-http-image-filter (<< ${source:Version}.1~),
-         libnginx-mod-http-xslt-filter (>= ${source:Version}),
-         libnginx-mod-http-xslt-filter (<< ${source:Version}.1~),
-         libnginx-mod-mail (>= ${source:Version}),
-         libnginx-mod-mail (<< ${source:Version}.1~),
-         libnginx-mod-stream (>= ${source:Version}),
-         libnginx-mod-stream (<< ${source:Version}.1~),
-         libnginx-mod-stream-geoip (>= ${source:Version}),
-         libnginx-mod-stream-geoip (<< ${source:Version}.1~),
+Depends: libnginx-mod-http-geoip2,
+         libnginx-mod-http-image-filter,
+         libnginx-mod-http-xslt-filter,
+         libnginx-mod-mail,
+         libnginx-mod-stream,
+         libnginx-mod-stream-geoip2,
          nginx (>= ${source:Version}),
          nginx (<< ${source:Version}.1~),
-         ${misc:Depends},
-         ${shlibs:Depends}
 Breaks: nginx-full (<< 1.18.0-1),
 Replaces: nginx-full (<< 1.18.0-1),
 Description: nginx web/proxy server (standard version)
@@ -130,8 +116,6 @@ Depends: libnginx-mod-http-auth-pam,
          libnginx-mod-stream-geoip2,
          nginx (>= ${source:Version}),
          nginx (<< ${source:Version}.1~),
-         ${misc:Depends},
-         ${shlibs:Depends}
 Description: nginx web/proxy server (standard version with 3rd parties)
  Nginx ("engine X") is a high-performance web and reverse proxy server
  created by Igor Sysoev. It can be used both as a standalone web server
@@ -162,8 +146,6 @@ Architecture: all
 Depends: libnginx-mod-http-echo,
          nginx (>= ${source:Version}),
          nginx (<< ${source:Version}.1~),
-         ${misc:Depends},
-         ${shlibs:Depends}
 Description: nginx web/proxy server (basic version)
  Nginx ("engine X") is a high-performance web and reverse proxy server
  created by Igor Sysoev. It can be used both as a standalone web server
@@ -182,15 +164,14 @@ Description: nginx web/proxy server (basic version)
  THIRD PARTY MODULES: Echo.
 
 Package: nginx-extras
-Architecture: any
-Depends: nginx (= ${binary:Version}),
-         libnginx-mod-http-geoip (= ${binary:Version}),
-         libnginx-mod-http-image-filter (= ${binary:Version}),
-         libnginx-mod-http-perl (= ${binary:Version}),
-         libnginx-mod-http-xslt-filter (= ${binary:Version}),
-         libnginx-mod-mail (= ${binary:Version}),
-         libnginx-mod-stream (= ${binary:Version}),
-         libnginx-mod-stream-geoip (= ${binary:Version}),
+Architecture: all
+Depends: libnginx-mod-http-geoip,
+         libnginx-mod-http-image-filter,
+         libnginx-mod-http-perl,
+         libnginx-mod-http-xslt-filter,
+         libnginx-mod-mail,
+         libnginx-mod-stream,
+         libnginx-mod-stream-geoip,
          libnginx-mod-http-auth-pam,
          libnginx-mod-http-cache-purge,
          libnginx-mod-http-dav-ext,
@@ -198,14 +179,13 @@ Depends: nginx (= ${binary:Version}),
          libnginx-mod-http-fancyindex,
          libnginx-mod-http-geoip2,
          libnginx-mod-http-headers-more-filter,
-         libnginx-mod-http-lua [amd64 arm64 armel armhf i386 mips64el mipsel s390x riscv64 powerpc],
          libnginx-mod-http-subs-filter,
          libnginx-mod-http-uploadprogress,
          libnginx-mod-http-upstream-fair,
          libnginx-mod-nchan,
          libnginx-mod-stream-geoip2,
-         ${misc:Depends},
-         ${shlibs:Depends}
+         nginx (>= ${source:Version}),
+         nginx (<< ${source:Version}.1~),
 Description: nginx web/proxy server (extended version)
  Nginx ("engine X") is a high-performance web and reverse proxy server
  created by Igor Sysoev. It can be used both as a standalone web server
@@ -234,7 +214,6 @@ Description: nginx web/proxy server (extended version)
 
 Package: libnginx-mod-http-geoip
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: GeoIP HTTP module for Nginx
  The ngx_http_geoip module creates variables with values depending on the
@@ -245,7 +224,6 @@ Description: GeoIP HTTP module for Nginx
 
 Package: libnginx-mod-http-image-filter
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: HTTP image filter module for Nginx
  The ngx_http_image_filter module is a filter that transforms images in JPEG,
@@ -256,7 +234,6 @@ Description: HTTP image filter module for Nginx
 
 Package: libnginx-mod-http-xslt-filter
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: XSLT Transformation module for Nginx
  The ngx_http_xslt_filter module is a filter that transforms XML responses
@@ -267,7 +244,6 @@ Description: XSLT Transformation module for Nginx
 
 Package: libnginx-mod-mail
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: Mail module for Nginx
  The nginx_mail module adds mail proxy support to nginx.
@@ -277,7 +253,6 @@ Description: Mail module for Nginx
 
 Package: libnginx-mod-stream
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: Stream module for Nginx
  The nginx_stream module adds stream proxy support to nginx.
@@ -288,8 +263,6 @@ Description: Stream module for Nginx
 
 Package: libnginx-mod-stream-geoip
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends},
- libnginx-mod-stream (= ${binary:Version}),
 Recommends: nginx,
 Description: GeoIP Stream module for Nginx
  The ngx_stream_geoip module creates variables with values depending on the
@@ -300,7 +273,6 @@ Description: GeoIP Stream module for Nginx
 
 Package: libnginx-mod-http-perl
 Architecture: any
-Depends: ${misc:Depends}, ${perl:Depends}, ${shlibs:Depends},
 Recommends: nginx,
 Description: Perl module for Nginx
  Embed Perl runtime into nginx.

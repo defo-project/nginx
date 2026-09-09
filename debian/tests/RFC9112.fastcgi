@@ -1,0 +1,87 @@
+#!/bin/bash
+# Test for security issue #3556 - Host header manipulation via absolute URI
+# RFC 9112 Section 3.2.2: When using absolute-form request-target,
+# the server MUST ignore the Host header and use the URI host instead.
+
+set -e
+
+TMPDIR="${AUTOPKGTEST_TMP:-/tmp}/fastcgi-RFC9112.fastcgi"
+mkdir -p $TMPDIR
+
+cleanup() {
+    [ -f "$TMPDIR/nginx.pid" ] && kill $(cat $TMPDIR/nginx.pid) 2>/dev/null || true
+    [ -n "$FCGI_PID" ] && kill $FCGI_PID 2>/dev/null || true
+    sleep 0.3
+    rm -rf "$TMPDIR"
+}
+trap cleanup EXIT
+
+# Create FastCGI server that echoes HTTP_HOST
+cat > $TMPDIR/fcgi-echo.pl << 'PERL'
+#!/usr/bin/env perl
+use strict;
+use FCGI;
+umask 0000;
+unlink $ARGV[0];
+my $socket = FCGI::OpenSocket($ARGV[0], 5);
+my $request = FCGI::Request(\*STDIN, \*STDOUT, \*STDERR, \%ENV, $socket);
+while ($request->Accept() >= 0) {
+    print "Content-Type: text/plain\r\n\r\n";
+    print "HTTP_HOST=$ENV{HTTP_HOST}\n";
+    print "HOST=$ENV{RHOST}\n";
+    print "SERVER_NAME=$ENV{SERVER_NAME}\n";
+}
+PERL
+chmod +x $TMPDIR/fcgi-echo.pl
+
+PORT=18771
+
+cat > $TMPDIR/nginx.conf << EOF
+worker_processes 1;
+daemon off;
+pid $TMPDIR/nginx.pid;
+error_log /dev/null;
+events { worker_connections 64; }
+http {
+    access_log off;
+    server {
+        listen $PORT;
+        server_name secure.example.com;
+        location / {
+            fastcgi_pass unix:$TMPDIR/fcgi.sock;
+            include /etc/nginx/fastcgi_params;
+	    fastcgi_param RHOST \$host;
+        }
+    }
+}
+EOF
+
+perl $TMPDIR/fcgi-echo.pl $TMPDIR/fcgi.sock &
+FCGI_PID=$!
+sleep 0.2
+/usr/sbin/nginx -c $TMPDIR/nginx.conf &
+sleep 0.3
+
+echo "=== Test #3556: Host Header Injection via Absolute URI ==="
+echo ""
+echo "Attack: curl --request-target 'http://secure.example.com/'"
+echo "             -H 'Host: malicious.attacker.com' http://127.0.0.1:$PORT/"
+echo ""
+
+RESULT=$(curl -s --request-target 'http://secure.example.com/' \
+    -H 'Host: malicious.attacker.com' http://127.0.0.1:$PORT/)
+
+HTTP_HOST=$(echo "$RESULT" | grep -oP 'HTTP_HOST=\K.*')
+HOST=$(echo "$RESULT" | grep -oP 'HOST=\K.*')
+SERVER_NAME=$(echo "$RESULT" | grep -oP 'SERVER_NAME=\K.*')
+
+if [ "$HTTP_HOST" = "secure.example.com" ]; then
+    echo "✓ PASS: HTTP_HOST correctly normalized to URI host (RFC 9112 compliant)"
+    exit 0
+elif [ "$HTTP_HOST" = "malicious.attacker.com" ]; then
+    echo "✗ FAIL: HTTP_HOST contains spoofed value (VULNERABLE)"
+    exit 1
+else
+    echo "? UNKNOWN: HTTP_HOST=$HTTP_HOST"
+    exit 2
+fi

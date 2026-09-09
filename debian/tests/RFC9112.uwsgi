@@ -1,0 +1,90 @@
+#!/bin/sh
+set -e
+
+TMP="${AUTOPKGTEST_TMP:-/tmp}"
+
+cat > "${TMP}/app.py" << 'PY'
+def application(environ, start_response):
+    body = (
+        "HTTP_HOST=%s\n"
+        "HOST=%s\n"
+        "SERVER_NAME=%s\n"
+    ) % (
+        environ.get("HTTP_HOST", ""),
+        environ.get("RHOST", ""),
+        environ.get("SERVER_NAME", ""),
+    )
+
+    body = body.encode("utf-8")
+    start_response(
+        "200 OK",
+        [
+            ("Content-Type", "text/plain"),
+            ("Content-Length", str(len(body))),
+        ],
+    )
+    return [body]
+PY
+
+rm -f "${TMP}/uwsgi.sock"
+
+uwsgi_python3 \
+  --master \
+  --processes 1 \
+  --wsgi-file "${TMP}/app.py" \
+  --callable application \
+  --socket "${TMP}/uwsgi.sock" \
+  --chmod-socket=666 \
+  --die-on-term \
+  >"${TMP}/uwsgi.log" 2>&1 &
+UWSGI_PID=$!
+
+sleep 1
+
+cleanup() {
+  ex=$?
+  kill -TERM "${UWSGI_PID}" 1>/dev/null 2>/dev/null || :
+  sleep 0.2
+  kill -KILL "${UWSGI_PID}" 1>/dev/null 2>/dev/null || :
+  rm -f "${TMP}/uwsgi.sock" "${TMP}/uwsgi.log" "${TMP}/app.py" || :
+  exit "${ex}"
+}
+trap "cleanup" EXIT TERM INT
+
+rm -f /etc/nginx/sites-enabled/default
+cat <<EOF > /etc/nginx/sites-enabled/default
+server {
+    listen 127.0.0.1:80;
+    server_name secure.example.com;
+
+    location / {
+        include /etc/nginx/uwsgi_params;
+        uwsgi_pass unix:${TMP}/uwsgi.sock;
+        uwsgi_param RHOST \$host;
+    }
+}
+EOF
+
+nginx -t
+invoke-rc.d nginx restart
+
+response=$(curl -s --fail --request-target 'http://secure.example.com/' -H 'Host: malicious.attacker.com' http://127.0.0.1/)
+echo "response"
+echo "========"
+echo "$response"
+echo "========"
+echo
+
+HTTP_HOST=$(echo "$response" | grep -oP 'HTTP_HOST=\K.*')
+if [ "$HTTP_HOST" = "secure.example.com" ]; then
+    echo "✓ PASS: HTTP_HOST correctly normalized to URI host (RFC 9112 compliant)"
+    exit 0
+elif [ "$HTTP_HOST" = "malicious.attacker.com" ]; then
+    echo "✗ FAIL: HTTP_HOST contains spoofed value (VULNERABLE)"
+    exit 1
+else
+    echo "? UNKNOWN: HTTP_HOST=$HTTP_HOST"
+    exit 2
+fi
+
+exit 0

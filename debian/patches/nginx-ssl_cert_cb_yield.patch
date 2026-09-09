@@ -14,9 +14,11 @@ Here we added support for such usage in NGINX 3rd-party modules
 (like ngx_lua) in NGINX's event handlers for downstream SSL
 connections.
 
---- a/src/event/ngx_event_openssl.c
-+++ b/src/event/ngx_event_openssl.c
-@@ -1914,6 +1914,23 @@
+Index: nginx/src/event/ngx_event_openssl.c
+===================================================================
+--- nginx.orig/src/event/ngx_event_openssl.c
++++ nginx/src/event/ngx_event_openssl.c
+@@ -1969,6 +1969,23 @@ ngx_ssl_try_early_data(ngx_connection_t
          return NGX_AGAIN;
      }
  
@@ -40,12 +42,10 @@ connections.
      err = (sslerr == SSL_ERROR_SYSCALL) ? ngx_errno : 0;
  
      c->ssl->no_wait_shutdown = 1;
-@@ -2050,6 +2067,21 @@
-         c->read->handler = ngx_ssl_handshake_handler;
-         c->write->handler = ngx_ssl_handshake_handler;
+@@ -2794,6 +2811,21 @@ ngx_ssl_write(ngx_connection_t *c, u_cha
  
-+        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
-+            return NGX_ERROR;
+         if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
+             return NGX_ERROR;
 +        }
 +
 +        if (ngx_handle_write_event(c->write, 0) != NGX_OK) {
@@ -59,6 +59,8 @@ connections.
 +        c->read->handler = ngx_ssl_handshake_handler;
 +        c->write->handler = ngx_ssl_handshake_handler;
 +
-         if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
-             return NGX_ERROR;
++        if (ngx_handle_read_event(c->read, 0) != NGX_OK) {
++            return NGX_ERROR;
          }
+ 
+         /*

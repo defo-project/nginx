@@ -1,8 +1,333 @@
-nginx (1.26.3-3.ech) UNRELEASED; urgency=medium
+nginx (1.30.4-5.ech) UNRELEASED; urgency=medium
 
   * Add DEfO support
 
  -- Jochen Sprickerhof <jspricke@debian.org>  Wed, 06 Aug 2025 16:09:43 +0200
+
+nginx (1.30.4-5) unstable; urgency=medium
+
+  * d/{rules,control}: split architecture-dependent and independent builds
+  * d/control: restore nginx-dev dependencies needed to build third-party
+    modules
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sun, 16 Aug 2026 18:31:57 +0000
+
+nginx (1.30.4-4) unstable; urgency=medium
+
+  * d/rules: rewrite from the scratch
+  * d/t/generic: test nginx-abi-* dependency for all libnginx-mod-* packages
+  * d/t/control: add libnginx-mod-http-xss dependency for generic tests
+  * d/t/control: add libnginx-mod-http-eval dependency for generic tests
+  * d/t/control: add libnginx-mod-http-auth-jwt dependency for generic tests
+  * d/control: remove ${misc:Depends}, ${perl:Depends}, ${shlibs:Depends}
+    as debhelper 14 adds them automatically
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sun, 16 Aug 2026 11:51:28 +0000
+
+nginx (1.30.4-3) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 01 Aug 2026 04:57:10 +0000
+
+nginx (1.30.4-2) experimental; urgency=medium
+
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.30.4-2
+  * d/control: debhelper-compat (= 14)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sun, 19 Jul 2026 00:16:48 +0000
+
+nginx (1.30.4-1) experimental; urgency=medium
+
+  * New upstream version 1.30.4
+    - fixes CVE-2026-42533, CVE-2026-60005, CVE-2026-56434
+  * d/p/CVE-2026-* remove, fixed in upstream
+  * d/upstream/signing-key.asc: replace by Roman Arutyunyan’s PGP public key
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 18 Jul 2026 16:52:41 +0000
+
+nginx (1.30.1-7) unstable; urgency=medium
+
+  * d/t/abicheck: remove chown, add warn when it fails and remove needs-root,
+    thanks to charles@debian.org for preparing the patch.
+  * d/p/CVE-2026-56434.patch add, backport fix for use-after-free when using
+    ngx_http_ssi_module (CVE-2026-56434)
+  * d/p/CVE-2026-60005.patch add, backport fix for memory disclosure
+    vulnerability when using ngx_http_slice_module (CVE-2026-60005)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 18 Jul 2026 15:47:51 +0000
+
+nginx (1.30.1-6) unstable; urgency=medium
+
+  * d/p/fix-cache-line-size-for-loongarch64.patch add,
+    backport loongarch64 detection and set cache line size 64
+    (Closes: 1140605)
+  * d/control: add `Suggests logrotate` for nginx-common (Closes: 1124757)
+  * d/changelog: fix the 1.30.1-5 entry, which already closed bug #1140361
+    (Closes: 1140361)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Wed, 24 Jun 2026 19:29:57 +0000
+
+nginx (1.30.1-5) unstable; urgency=medium
+
+  * d/t/ssi-module-test: remove the test associated with the bug report,
+    since the underlying bug has been fixed in bookworm
+  * d/t/RFC9112: create a wrapper for RFC9112 tests, then merge d/t/proxy,
+    d/t/uwsgi-RFC9112, and d/t/fastcgi-RFC9112 into the wrapper to improve
+    test performance.
+  * d/control: bump Standards-Version: 4.7.4, no changes
+  * d/p/CVE-2026-42055.patch add, backport fix for buffer overflow
+    vulnerability in the ngx_http_proxy_v2_module and ngx_http_grpc_module
+    (CVE-2026-42055) (Closes: 1140359) (Closes: 1140361)
+  * d/p/CVE-2026-48142.patch add, backport fix for buffer overread
+    vulnerability in the ngx_http_charset_module (CVE-2026-48142)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 19 Jun 2026 19:21:49 +0000
+
+nginx (1.30.1-4) unstable; urgency=medium
+
+  [ Miao Wang ]
+  * d/debhelper: automatically add dependencies for nginx module packages
+    based on the symbol table of the module files.
+  * d/debhelper/dh_nginx: add dependency to nginx-common with exact version
+    for in-tree modules, this ensures that users cannot mix different versions
+    of in-tree modules and nginx, which could lead to breakage.
+  * d/rules: prevent restarting or starting the nginx service when installing
+    or upgrading nginx-common package, because the starting and upgrading of
+    nginx is handled by the nginx package.
+  * d/control: simplify dependencies for nginx-flavors packages, remove
+    explicit version dependencies to in-tree modules and make nginx-extras
+    arch-all.
+
+  [ Jan Mojžíš ]
+  * d/t/abicheck add, detect unintended API changes in the nginx-dev
+    package by comparing header files with previous version
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Mon, 08 Jun 2026 17:16:28 +0000
+
+nginx (1.30.1-3) unstable; urgency=medium
+
+  * backport fix for buffer overflow vulnerability in the
+    ngx_http_rewrite_module (CVE-2026-9256) from upstream 1.30.2 nginx.
+    * d/p/CVE-2026-9256.patch add (Closes: 1137339)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 23 May 2026 06:23:38 +0000
+
+nginx (1.30.1-2) unstable; urgency=medium
+
+  * Upload to unstable
+  * d/copyright: update Nginx Inc. and my copyright year
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Tue, 19 May 2026 13:53:49 +0000
+
+nginx (1.30.1-1) experimental; urgency=medium
+
+  * New upstream version 1.30.1
+  * d/p/{cve,CVE}-* remove, fixed in upstream
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.30.1-1
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 16 May 2026 20:27:27 +0000
+
+nginx (1.30.0-4) unstable; urgency=medium
+
+  * backport changes from upstream nginx, HTTP/3 address spoofing
+    (CVE-2026-40460), buffer overread in the ngx_http_scgi_module and
+    ngx_http_uwsgi_module (CVE-2026-42946), resolver use-after-free in OCSP
+    (CVE-2026-40701), buffer overread in the ngx_http_charset_module
+    (CVE-2026-42934), HTTP/2 request injection in the ngx_http_proxy_module
+    (CVE-2026-42926)
+    * d/p/CVE-2026-40460.patch add
+    * d/p/CVE-2026-42946.patch add
+    * d/p/CVE-2026-40701.patch add
+    * d/p/CVE-2026-42934.patch add
+    * d/p/CVE-2026-42926.patch add
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 15 May 2026 20:26:45 +0000
+
+nginx (1.30.0-3) unstable; urgency=medium
+
+  * SECURITY UPDATE: buffer overrun in ngx_http_rewrite_module
+    - d/patches/cve-2026-42945.patch: Apply upstream commit/fix for CVE
+    - CVE-2026-42945
+
+ -- Thomas Ward <teward@ubuntu.com>  Wed, 13 May 2026 17:24:37 -0400
+
+nginx (1.30.0-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Tue, 21 Apr 2026 06:29:47 +0000
+
+nginx (1.30.0-1) experimental; urgency=medium
+
+  * New upstream version 1.30.0
+  * d/upstream/signing-key.asc: replace by Roman Sergey Kandaurov public key
+  * d/p/debian/patches/backport-request_port_and_is_request_port.patch: remove,
+    fixed in upstream
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.30.0-1
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Wed, 15 Apr 2026 20:12:06 +0000
+
+nginx (1.28.3-2) unstable; urgency=medium
+
+  * Upload to unstable
+  * Finally close the bug #1126960 (Closes: 1126960)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 27 Mar 2026 14:26:06 +0000
+
+nginx (1.28.3-1) experimental; urgency=medium
+
+  * New upstream version 1.28.3
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.28.3-1
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 27 Mar 2026 10:58:07 +0000
+
+nginx (1.28.2-4) experimental; urgency=medium
+
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.28.2-4, the previous
+    release (1.28.2-3) contained a backported patch that modified the ABI.
+    As a result, the nginx ABI version is bumped to nginx-abi-1.28.2-4.
+  * d/changelog: fix incorrectly closed bug in release 1.28.2-3
+    (112696 → 1126960)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Mon, 23 Mar 2026 06:07:52 +0000
+
+nginx (1.28.2-3) unstable; urgency=medium
+
+  * All changes in this release focus on mitigating incorrect Host header
+    handling in proxied requests by backporting $request_port and
+    $is_request_port variables from newer nginx, and explicitly setting
+    HTTP_HOST in proxy_params, fastcgi_params, uwsgi_params and
+    scgi_params to $host$is_request_port$request_port. (Closes: 1126960)
+  * d/p/debian/patches/backport-request_port_and_is_request_port.patch: add
+    - backport of $request_port and $is_request_port variables from newer nginx
+    - implements support across HTTP/1.x as well as HTTP/2 and HTTP/3 code paths
+    - note: HTTP/3 module in nginx is still considered experimental upstream
+  * d/conf/proxy_params: use $host$is_request_port$request_port instead of
+    $http_host
+  * d/t/proxy: add test verifying $host$is_request_port$request_port behavior
+  * d/t/fastcgi-RFC9112: add test that verifies the correct Host value
+    according to RFC 9112, thanks to @yadd
+  * d/conf/fastcgi_params:
+    add 'fastcgi_param HTTP_HOST $host$is_request_port$request_port;'
+  * d/t/uwsgi-RFC9112: add test that verifies the correct Host value
+    according to RFC 9112 for uwsgi
+  * d/conf/uwsgi_params: add
+    'uwsgi_param HTTP_HOST $host$is_request_port$request_port;'
+  * d/conf/scgi_params: add
+    'scgi_param HTTP_HOST $host$is_request_port$request_port;'
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 21 Mar 2026 17:37:50 +0000
+
+nginx (1.28.2-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Mon, 16 Feb 2026 21:27:31 +0100
+
+nginx (1.28.2-1) experimental; urgency=medium
+
+  * New upstream version 1.28.2
+  * d/upstream/signing-key.asc: replace by Roman Arutyunyan’s PGP public key
+    which signed 1.28.2 release
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.28.2-1
+  * d/p/CVE-2026-1642.patch: remove, fixed in upstream
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Tue, 10 Feb 2026 18:30:45 +0100
+
+nginx (1.28.1-3) unstable; urgency=medium
+
+  * d/p/CVE-2026-1642.patch: add, backport CVE-2026-1642 fix from upcoming
+    nging 1.28.2 release
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Mon, 09 Feb 2026 05:03:16 +0100
+
+nginx (1.28.1-2) unstable; urgency=medium
+
+  * Upload to unstable
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 26 Dec 2025 16:36:46 +0100
+
+nginx (1.28.1-1) experimental; urgency=medium
+
+  * New upstream version 1.28.1
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.28.1-1
+  * d/p/CVE-2025-53859.patch: remove, fixed in upstream
+  * d/control: remove Rules-Requires-Root: no
+  * d/watch: rewrite to version 5
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Wed, 24 Dec 2025 13:27:40 +0100
+
+nginx (1.28.0-6) unstable; urgency=medium
+
+  * d/debhelper/nginx_mod.pm: set worker_connections to 128 instead of default
+    512 in the nginx test configuration in dh_auto_test.
+    This allows one to run the test even on a system that has FD_SETSIZE 256
+    and uses ngx_select_module like hurd.
+    Fix building third-party modules on GNU Hurd.
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Mon, 08 Sep 2025 20:06:40 +0200
+
+nginx (1.28.0-5) unstable; urgency=medium
+
+  [ Miao Wang ]
+  * d/p/override-uname.patch,d/rules: fix override-* options detection,
+    fix build on GNU Hurd.
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 06 Sep 2025 10:08:21 +0200
+
+nginx (1.28.0-4) unstable; urgency=medium
+
+  [ Jan Mojžíš ]
+  * d/p/0003-define_gnu_source-on-other-glibc-based-platforms.patch remove,
+    This patch primarily addressed issues on GNU/kFreeBSD. And GNU/kFreeBSD has
+    been removed from Debian.
+  * d/control: let nginx-core depend on geoip2 instead of geoip.
+    Harmonizing with Ubuntu downstream (Closes: 921034).
+  * d/control: remove iproute2 dependency, and do not check open port 80
+    in d/nginx.postinst. This test is no longer necessary, as the systemd
+    log message is sufficient (Closes: 1023382).
+  * d/control: remove lua module from nginx-extras and remove from d/t/control
+    as well. Lua module had a problematic dependency, it didn't work on all
+    platforms due to its dependency on luajit. Therefore it is better to
+    remove it from the nginx-extras dependency. Lua module will still be
+    installable as a separate module.
+  * d/copyright: update Nginx Inc. copyright year
+
+  [ Miao Wang ]
+  * d/patches/override-uname.patch: added, override uname command with
+    configuration options, so that the products built is unrelated with
+    the build system. This is especially useful for building nginx for i386
+    but the build sysroot is running on the amd64 kernel (armhf and arm64
+    likewise), where uname is giving the wrong information.
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Fri, 05 Sep 2025 18:24:59 +0200
+
+nginx (1.28.0-3) unstable; urgency=medium
+
+  * Upload to unstable
+  * d/p/CVE-2025-53859.patch add, fixes CVE-2025-53859 (Closes: 1111138)
+  * d/gbp.conf: dist = DEP14, debian-branch = debian/latest
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Tue, 26 Aug 2025 07:16:58 +0200
+
+nginx (1.28.0-2) experimental; urgency=medium
+
+  * d/p/CVE-2025-53859.patch add, fixes CVE-2025-53859 (Closes: 1111138)
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Sat, 16 Aug 2025 16:11:55 +0200
+
+nginx (1.28.0-1) experimental; urgency=medium
+
+  * New upstream version 1.28.0
+  * d/upstream/signing-key.asc: remove older keys
+  * d/nginx-doc.docs: README -> README.md
+  * d/patches/nginx-ssl_cert_cb_yield.patch: quilt refresh
+  * d/libnginx-mod.abisubstvars: update ABI to nginx-abi-1.28.0-1
+  * d/changelog: fix whitespace in 1.26.3-3 record
+  * d/control: bump Standards-Version: 4.7.2, no changes
+
+ -- Jan Mojžíš <janmojzis@debian.org>  Tue, 12 Aug 2025 09:17:16 +0200
 
 nginx (1.26.3-3) unstable; urgency=medium
 
@@ -12,9 +337,9 @@ nginx (1.26.3-3) unstable; urgency=medium
     for riscv64 platform
 
   [ Thomas Ward ]
-  * d/nginx-common.nginx.service: Add ConditionFileIsExecutable to 
+  * d/nginx-common.nginx.service: Add ConditionFileIsExecutable to
     SystemD service file, prevents starting of service if nginx is
-    not installed (which can happen if nginx-common is installed 
+    not installed (which can happen if nginx-common is installed
     independently from `nginx` itself (Closes: #1098477)
 
  -- Jan Mojžíš <janmojzis@debian.org>  Thu, 15 May 2025 15:31:38 +0200

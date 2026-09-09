@@ -1,0 +1,68 @@
+#!/bin/sh
+
+set -e
+
+rm /etc/nginx/sites-enabled/default
+cat <<EOF > '/etc/nginx/sites-enabled/default'
+# --- backend (echo server) ---
+server {
+    listen 127.0.0.1:81;
+    location /echo {
+        default_type text/plain;
+        return 200 "host_header=\$http_host\n";
+    }
+}
+# --- proxy server ---
+server {
+    listen 127.0.0.1:80;
+    location /test {
+        proxy_pass http://127.0.0.1:81/echo;
+        proxy_set_header Host \$host\$is_request_port\$request_port;
+    }
+}
+EOF
+
+nginx -t
+invoke-rc.d nginx restart
+
+exp='host_header=127.0.0.1
+host_header=127.0.0.1
+host_header=localhost:9999
+host_header=localhost:9999
+host_header=localhost:5678
+host_header=localhost:5678
+host_header=localhost:5678
+host_header=localhost:5678'
+
+out=`
+# GET /test HTTP/1.1
+# Host: 127.0.0.1
+curl --http1.1 --silent --fail http://127.0.0.1:80/test;
+curl --http2 --silent --fail http://127.0.0.1:80/test;
+# GET /test HTTP/1.1
+# Host: localhost:9999
+curl --http1.1 --silent --fail -H "Host: localhost:9999" http://localhost:80/test;
+curl --http2 --silent --fail -H "Host: localhost:9999" http://localhost:80/test;
+# GET http://localhost:5678/test HTTP/1.1
+# Host: 127.0.0.1
+curl --http1.1 --silent --fail --request-target "http://localhost:5678/test" http://127.0.0.1:80/test
+curl --http2 --silent --fail --request-target "http://localhost:5678/test" http://127.0.0.1:80/test
+# GET http://localhost:5678/test HTTP/1.1
+# Host: localhost:9999
+curl --http1.1 --silent --fail --request-target "http://localhost:5678/test" -H "Host: localhost:9999" http://localhost:80/test
+curl --http2 --silent --fail --request-target "http://localhost:5678/test" -H "Host: localhost:9999" http://localhost:80/test
+`
+
+if [ x"${out}" != x"${exp}" ]; then
+  echo "output:"
+  echo "====================="
+  echo "${out}"
+  echo "====================="
+  echo "expected output:"
+  echo "====================="
+  echo "${exp}"
+  echo "====================="
+  exit 1
+fi
+
+exit 0

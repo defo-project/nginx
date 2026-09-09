@@ -40,14 +40,6 @@ sub new {
 	$this->prefer_out_of_source_building(@_);
 	$this->{has_ndk} = $this->has_build_dep("libnginx-mod-http-ndk-dev");
 	$this->{has_stream} = $this->has_build_dep("libnginx-mod-stream");
-	foreach my $cur (getpackages('arch')) {
-		if ($this->{has_ndk} == 1) {
-			addsubstvar($cur, "misc:Depends", "libnginx-mod-http-ndk");
-		}
-		if ($this->{has_stream} == 1) {
-			addsubstvar($cur, "misc:Depends", "libnginx-mod-stream (>= $ngx_ver), libnginx-mod-stream (<< $ngx_ver.1~)");
-		}
-	}
 	return $this;
 }
 
@@ -61,10 +53,10 @@ sub configure {
 			"bld_dir" => $this->get_builddir,
 			"pwd_dir" => $this->{cwd},
 		},
-	}, "bash", "-c", '. ./conf_flags
+	}, "bash", "-c", '
+		# the inclusion of conf_flags must happen in module directory
+		pushd "$pwd_dir/$src_dir"; . "${DIRSTACK[1]}/conf_flags"; popd
 		./configure \\
-		--with-cc-opt="$(cd "$pwd_dir/$src_dir"; dpkg-buildflags --get CFLAGS) -fPIC $(cd "$pwd_dir/$src_dir"; dpkg-buildflags --get CPPFLAGS)" \\
-		--with-ld-opt="$(cd "$pwd_dir/$src_dir"; dpkg-buildflags --get LDFLAGS) -fPIC" \\
 		"${NGX_CONF_FLAGS[@]}" \\
 		--add-dynamic-module="$pwd_dir/$src_dir" \\
 		--builddir="$pwd_dir/$bld_dir" \\
@@ -98,7 +90,7 @@ sub test {
 		for i in *.so; do
 			echo "load_module $PWD/$i;" >> "$tmp_conf"
 		done
-		echo "events{}" >> "$tmp_conf"
+		echo "events{worker_connections 128;}" >> "$tmp_conf"
 		/usr/sbin/nginx -g "error_log /dev/null; pid /dev/null;" -t -q -c "$PWD/$tmp_conf"
 		rm -f "$tmp_conf"
 	', "dummy", @_);

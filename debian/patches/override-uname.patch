@@ -1,0 +1,73 @@
+Description: Override uname probing during configure
+Author: Miao Wang <shankerwangmiao@gmail.com>
+Last-Update: 2025-02-13
+---
+
+diff --git a/auto/options b/auto/options
+index 6a6e990..2743c15 100644
+--- a/auto/options
++++ b/auto/options
+@@ -17,6 +17,10 @@ NGX_USER=
+ NGX_GROUP=
+ NGX_BUILD=
+ 
++NGX_OVERRIDE_SYSTEM=
++NGX_OVERRIDE_RELEASE=
++NGX_OVERRIDE_MACHINE=
++
+ CC=${CC:-cc}
+ CPP=
+ NGX_OBJS=objs
+@@ -206,6 +210,10 @@ do
+ 
+         --crossbuild=*)                  NGX_PLATFORM="$value"      ;;
+ 
++        --override-system=*)             NGX_OVERRIDE_SYSTEM="$value" ;;
++        --override-release=*)            NGX_OVERRIDE_RELEASE="$value" ;;
++        --override-machine=*)            NGX_OVERRIDE_MACHINE="$value" ;;
++
+         --build=*)                       NGX_BUILD="$value"         ;;
+         --builddir=*)                    NGX_OBJS="$value"          ;;
+ 
+diff --git a/auto/os/linux b/auto/os/linux
+index bc0556b..4c85efd 100644
+--- a/auto/os/linux
++++ b/auto/os/linux
+@@ -18,7 +18,7 @@ CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+ 
+ # Linux kernel version
+ 
+-version=$((`uname -r \
++version=$((`echo "$NGX_RELEASE" \
+     | sed -n -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/ \
+                                                  \1*256*256+\2*256+\3/p' \
+              -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1*256*256+\2*256/p'`))
+diff --git a/configure b/configure
+index 5b88ebb..89d1e62 100755
+--- a/configure
++++ b/configure
+@@ -27,9 +27,21 @@ fi
+ if test -z "$NGX_PLATFORM"; then
+     echo "checking for OS"
+ 
+-    NGX_SYSTEM=`uname -s 2>/dev/null`
+-    NGX_RELEASE=`uname -r 2>/dev/null`
+-    NGX_MACHINE=`uname -m 2>/dev/null`
++    if test -n "$NGX_OVERRIDE_SYSTEM"; then
++        NGX_SYSTEM=$NGX_OVERRIDE_SYSTEM
++    else
++        NGX_SYSTEM=`uname -s 2>/dev/null`
++    fi
++    if test -n "$NGX_OVERRIDE_RELEASE"; then
++        NGX_RELEASE=$NGX_OVERRIDE_RELEASE
++    else
++        NGX_RELEASE=`uname -r 2>/dev/null`
++    fi
++    if test -n "$NGX_OVERRIDE_MACHINE"; then
++        NGX_MACHINE=$NGX_OVERRIDE_MACHINE
++    else
++        NGX_MACHINE=`uname -m 2>/dev/null`
++    fi
+ 
+     echo " + $NGX_SYSTEM $NGX_RELEASE $NGX_MACHINE"
+ 
