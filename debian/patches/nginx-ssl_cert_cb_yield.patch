@@ -39,7 +39,7 @@ connections.
 +
      err = (sslerr == SSL_ERROR_SYSCALL) ? ngx_errno : 0;
  
-     c->ssl->no_wait_shutdown = 1;
+     if (sslerr == SSL_ERROR_SYSCALL && ERR_peek_error() == 0 && err == 0) {
 @@ -3291,6 +3308,21 @@ ngx_ssl_write(ngx_connection_t *c, u_char *data, size_t size)
              return NGX_ERROR;
          }
